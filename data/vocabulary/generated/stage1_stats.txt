@@ -1,0 +1,23 @@
+STAGE 1 VOCABULARY BUILD
+Common ILI synsets: 27,952
+Clean lexical rows (all): 36,649
+Import-ready rows with official CEFR: 7,784
+Synonym edges: 133,670
+
+POS:
+  noun: 22,478
+  adjective: 7,929
+  verb: 5,233
+  adverb: 1,009
+
+CEFR import-ready:
+  A1: 996
+  A2: 1,168
+  B1: 2,037
+  B2: 2,256
+  C1: 738
+  C2: 589
+
+Rejected:
+  uz_invalid: 736
+  en_invalid: 151

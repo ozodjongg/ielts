@@ -1,0 +1,14 @@
+english,synonym,weight,source
+big,large,0.85,V5-demo-original
+small,little,0.85,V5-demo-original
+happy,glad,0.85,V5-demo-original
+difficult,complex,0.85,V5-demo-original
+improve,enhance,0.85,V5-demo-original
+result,outcome,0.85,V5-demo-original
+impact,influence,0.85,V5-demo-original
+approach,strategy,0.85,V5-demo-original
+important,significant,0.85,V5-demo-original
+reliable,validity,0.85,V5-demo-original
+explain,clarify,0.85,V5-demo-original
+clarify,elucidate,0.85,V5-demo-original
+support,corroborate,0.85,V5-demo-original

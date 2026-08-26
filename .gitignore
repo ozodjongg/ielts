@@ -1,0 +1,10 @@
+.env
+/.local-run/
+/.runtime/
+**/.env.local
+**/node_modules/
+**/.next/
+*.log
+.DS_Store
+.vscode/
+.idea/

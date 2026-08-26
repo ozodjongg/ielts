@@ -1,0 +1,181 @@
+english,uzbek,part_of_speech,cefr,frequency_rank,synonym_group_id,source_name,source_license,source_ref
+hello,salom|assalomu alaykum,interjection,A1,1,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+good,yaxshi,adjective,A1,2,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+bad,yomon,adjective,A1,3,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+big,katta,adjective,A1,4,1001,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+small,kichik,adjective,A1,5,1002,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+happy,xursand|baxtli,adjective,A1,6,1003,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+sad,xafa|g‘amgin,adjective,A1,7,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+house,uy,noun,A1,8,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+school,maktab,noun,A1,9,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+book,kitob,noun,A1,10,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+water,suv,noun,A1,11,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+food,ovqat,noun,A1,12,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+family,oila,noun,A1,13,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+friend,do‘st,noun,A1,14,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+day,kun,noun,A1,15,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+night,tun|kecha,noun,A1,16,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+work,ish|ishlamoq,noun,A1,17,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+go,bormoq,verb,A1,18,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+come,kelmoq,verb,A1,19,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+eat,yemoq,verb,A1,20,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+drink,ichmoq,verb,A1,21,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+read,o‘qimoq,verb,A1,22,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+write,yozmoq,verb,A1,23,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+speak,gapirmoq,verb,A1,24,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+listen,tinglamoq,verb,A1,25,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+see,ko‘rmoq,verb,A1,26,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+like,yoqtirmoq,verb,A1,27,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+want,xohlamoq,verb,A1,28,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+new,yangi,adjective,A1,29,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+old,eski|qari,adjective,A1,30,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+large,katta|yirik,adjective,A2,31,1001,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+little,kichik|oz,adjective,A2,32,1002,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+glad,xursand,adjective,A2,33,1003,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+angry,jahldor|g‘azablangan,adjective,A2,34,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+easy,oson,adjective,A2,35,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+difficult,qiyin,adjective,A2,36,1004,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+travel,sayohat qilmoq,verb,A2,37,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+arrive,yetib kelmoq,verb,A2,38,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+leave,ketmoq|tark etmoq,verb,A2,39,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+choose,tanlamoq,verb,A2,40,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+decide,qaror qilmoq,verb,A2,41,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+remember,eslamoq,verb,A2,42,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+forget,unutmoq,verb,A2,43,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+borrow,qarzga olmoq,verb,A2,44,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+lend,qarzga bermoq,verb,A2,45,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+market,bozor,noun,A2,46,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+station,bekat|stansiya,noun,A2,47,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+weather,ob-havo,noun,A2,48,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+holiday,ta’til|bayram,noun,A2,49,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+message,xabar,noun,A2,50,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+meeting,uchrashuv|yig‘ilish,noun,A2,51,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+language,til,noun,A2,52,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+question,savol,noun,A2,53,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+answer,javob,noun,A2,54,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+important,muhim,adjective,A2,55,1009,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+possible,mumkin,adjective,A2,56,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+careful,ehtiyotkor,adjective,A2,57,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+usually,odatda,adverb,A2,58,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+sometimes,ba’zan,adverb,A2,59,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+quickly,tezda,adverb,A2,60,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+improve,yaxshilamoq,verb,B1,61,1005,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+develop,rivojlantirmoq,verb,B1,62,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+achieve,erishmoq,verb,B1,63,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+explain,tushuntirmoq,verb,B1,64,1011,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+compare,taqqoslamoq,verb,B1,65,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+suggest,taklif qilmoq,verb,B1,66,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+avoid,chetlab o‘tmoq|oldini olmoq,verb,B1,67,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+manage,boshqarmoq|uddalamoq,verb,B1,68,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+support,qo‘llab-quvvatlamoq,verb,B1,69,1012,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+experience,tajriba,noun,B1,70,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+opportunity,imkoniyat,noun,B1,71,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+environment,atrof-muhit,noun,B1,72,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+education,ta’lim,noun,B1,73,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+community,hamjamiyat,noun,B1,74,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+behavior,xulq-atvor,noun,B1,75,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+advantage,afzallik,noun,B1,76,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+disadvantage,kamchilik,noun,B1,77,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+solution,yechim,noun,B1,78,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+result,natija,noun,B1,79,1006,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+purpose,maqsad,noun,B1,80,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+confident,o‘ziga ishongan,adjective,B1,81,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+responsible,mas’uliyatli,adjective,B1,82,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+successful,muvaffaqiyatli,adjective,B1,83,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+similar,o‘xshash,adjective,B1,84,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+different,farqli,adjective,B1,85,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+however,biroq|ammo,adverb,B1,86,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+therefore,shuning uchun,adverb,B1,87,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+probably,ehtimol,adverb,B1,88,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+recently,yaqinda,adverb,B1,89,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+although,garchi,conjunction,B1,90,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+analyze,tahlil qilmoq,verb,B2,91,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+evaluate,baholamoq,verb,B2,92,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+establish,tashkil etmoq|o‘rnatmoq,verb,B2,93,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+maintain,saqlab turmoq,verb,B2,94,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+require,talab qilmoq,verb,B2,95,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+influence,ta’sir qilmoq,verb,B2,96,1007,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+indicate,ko‘rsatmoq,verb,B2,97,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+assume,faraz qilmoq,verb,B2,98,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+contribute,hissa qo‘shmoq,verb,B2,99,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+challenge,qiyinchilik|sinov,noun,B2,100,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+approach,yondashuv,noun,B2,101,1008,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+evidence,dalil,noun,B2,102,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+impact,ta’sir,noun,B2,103,1007,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+resource,resurs|manba,noun,B2,104,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+policy,siyosat|qoida,noun,B2,105,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+trend,tendensiya,noun,B2,106,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+factor,omil,noun,B2,107,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+issue,masala|muammo,noun,B2,108,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+strategy,strategiya,noun,B2,109,1008,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+outcome,yakuniy natija,noun,B2,110,1006,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+significant,sezilarli|muhim,adjective,B2,111,1009,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+appropriate,mos|munosib,adjective,B2,112,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+efficient,samarali,adjective,B2,113,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+complex,murakkab,adjective,B2,114,1004,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+reliable,ishonchli,adjective,B2,115,1010,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+overall,umuman|umumiy,adverb,B2,116,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+nevertheless,shunga qaramay,adverb,B2,117,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+consequently,natijada,adverb,B2,118,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+whereas,holbuki,conjunction,B2,119,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+despite,qaramay,preposition,B2,120,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+acknowledge,tan olmoq|e’tirof etmoq,verb,C1,121,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+anticipate,oldindan kutmoq,verb,C1,122,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+clarify,aniqlashtirmoq,verb,C1,123,1011,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+demonstrate,namoyish etmoq|isbotlamoq,verb,C1,124,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+derive,kelib chiqmoq|hosil qilmoq,verb,C1,125,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+enhance,kuchaytirmoq|yaxshilamoq,verb,C1,126,1005,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+facilitate,yengillashtirmoq,verb,C1,127,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+implement,amalga oshirmoq,verb,C1,128,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+justify,asoslamoq,verb,C1,129,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+perceive,idrok etmoq,verb,C1,130,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+perspective,nuqtai nazar,noun,C1,131,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+constraint,cheklov,noun,C1,132,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+framework,tuzilma|asos,noun,C1,133,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+implication,oqibat|mazmun,noun,C1,134,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+incentive,rag‘bat,noun,C1,135,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+intervention,aralashuv|chora,noun,C1,136,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+notion,tushuncha,noun,C1,137,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+priority,ustuvorlik,noun,C1,138,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+scope,qamrov|doira,noun,C1,139,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+validity,haqqoniylik|yaroqlilik,noun,C1,140,1010,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+coherent,izchil,adjective,C1,141,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+comprehensive,keng qamrovli,adjective,C1,142,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+controversial,bahsli,adjective,C1,143,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+inherent,ajralmas|ichki,adjective,C1,144,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+plausible,ishonarli,adjective,C1,145,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+predominantly,asosan,adverb,C1,146,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+subsequently,keyinchalik,adverb,C1,147,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+arguably,aytish mumkinki,adverb,C1,148,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+regardless,qat’i nazar,adverb,C1,149,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+thereby,shu orqali,adverb,C1,150,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+alleviate,yengillashtirmoq|kamaytirmoq,verb,C2,151,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+articulate,aniq ifodalamoq,verb,C2,152,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+corroborate,dalil bilan tasdiqlamoq,verb,C2,153,1012,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+delineate,aniq chegaralamoq|tavsiflamoq,verb,C2,154,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+disseminate,keng tarqatmoq,verb,C2,155,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+elucidate,batafsil tushuntirmoq,verb,C2,156,1011,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+exacerbate,yanada og‘irlashtirmoq,verb,C2,157,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+mitigate,yumshatmoq|kamaytirmoq,verb,C2,158,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+reconcile,muvofiqlashtirmoq|yarashtirmoq,verb,C2,159,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+scrutinize,sinchiklab tekshirmoq,verb,C2,160,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+ambiguity,noaniqlik|ikki ma’nolilik,noun,C2,161,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+conundrum,murakkab jumboq,noun,C2,162,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+discrepancy,nomuvofiqlik|tafovut,noun,C2,163,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+nuance,nozik farq,noun,C2,164,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+paradigm,namuna|paradigma,noun,C2,165,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+prerequisite,old shart,noun,C2,166,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+ramification,keng oqibat,noun,C2,167,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+rationale,asos|mantiqiy sabab,noun,C2,168,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+synthesis,uyg‘unlashtirish|sintez,noun,C2,169,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+trajectory,rivojlanish yo‘nalishi,noun,C2,170,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+arbitrary,o‘zboshimcha|asossiz,adjective,C2,171,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+conspicuous,yaqqol ko‘rinadigan,adjective,C2,172,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+intrinsic,ichki|mohiyatan xos,adjective,C2,173,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+meticulous,o‘ta sinchkov,adjective,C2,174,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+tenuous,zaif asoslangan,adjective,C2,175,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+unequivocal,mutlaqo aniq,adjective,C2,176,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+ostensibly,tashqi ko‘rinishda,adverb,C2,177,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+notwithstanding,shunga qaramay,preposition,C2,178,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+henceforth,bundan buyon,adverb,C2,179,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5
+insofar,shu darajadaki,adverb,C2,180,,V5-demo-original,internal-demo-only,qa-balanced-cefr-v5

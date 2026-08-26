@@ -1,0 +1,18 @@
+{
+  "schema_version": "v5.1.0",
+  "target_capacity": 100000,
+  "production_lexemes_bundled": 0,
+  "demo_lexemes_bundled": 180,
+  "demo_lexemes_per_cefr": {
+    "A1": 30,
+    "A2": 30,
+    "B1": 30,
+    "B2": 30,
+    "C1": 30,
+    "C2": 30
+  },
+  "demo_synonym_pairs": 13,
+  "production_ready_dictionary_claim": false,
+  "reason": "The bundled vocabulary is an original, balanced QA/demo corpus for local testing. Production deployments should import a verified redistribution-safe English-Uzbek learner dictionary with source/license metadata.",
+  "import_command": "go run ./cmd/vocab-import -database \"$VOCABULARY_DATABASE_URL\" -words ../data/vocabulary/demo_seed.csv -synonyms ../data/vocabulary/demo_synonyms.csv"
+}

@@ -1,0 +1,81 @@
+﻿subject_uuid,subject_id,name,short_name,category,level,difficulty,point,question_count,is_active
+ac4e17de-6058-5a75-8043-59fe7629f8fb,1,Verb to Be: Present,A1_VERB_TO_BE,Grammar,A1,1,1,100,true
+756976a5-169c-5ad4-b7f9-3277107b702e,2,Subject Pronouns,A1_SUBJECT_PRONOUNS,Grammar,A1,1,1,100,true
+599c0a2f-b4f4-54b3-ac8d-2128c4f4b6e5,3,Object Pronouns,A1_OBJECT_PRONOUNS,Grammar,A1,1,1,100,true
+f1f9cdfc-33d6-535f-9163-1c7be848c500,4,Possessive Adjectives and Pronouns,A1_POSSESSIVES,Grammar,A1,1,1,100,true
+045ce2f4-f350-55d6-b6bd-f765b96ed335,5,"Basic Articles: A, An and The",A1_ARTICLES,Grammar,A1,1,1,100,true
+9fb2ce5d-73bf-5628-a2b5-93b45148c8c7,6,Singular and Plural Nouns,A1_PLURAL_NOUNS,Grammar,A1,1,1,100,true
+a92acbba-e080-5a0e-8d75-d9b47485696e,7,"This, That, These and Those",A1_DEMONSTRATIVES,Grammar,A1,1,1,100,true
+b9e80e98-1499-5588-bdf1-83f9dc5d1116,8,There Is and There Are,A1_THERE_IS_ARE,Grammar,A1,1,1,100,true
+1fd2e454-a426-5f4d-bb0a-857c5e616706,9,Have Got and Has Got,A1_HAVE_GOT,Grammar,A1,2,1,100,true
+75fd41b3-d5bf-5f6e-a30f-a352a10ccb2a,10,Present Simple: Affirmative,A1_PRESENT_SIMPLE_AFFIRMATIVE,Grammar,A1,2,1,100,true
+8c81564b-4c60-5666-badb-8fbbee4bdb28,11,Present Simple: Negatives and Questions,A1_PRESENT_SIMPLE_NEGATIVE_QUESTION,Grammar,A1,2,1,100,true
+f2a22944-a22f-5f87-bcd7-e8695c7f0b12,12,Adverbs of Frequency,A1_FREQUENCY_ADVERBS,Grammar,A1,2,1,100,true
+348786be-7105-5b84-ab9d-c4ac86334f2c,13,Present Continuous,A1_PRESENT_CONTINUOUS,Grammar,A1,2,1,100,true
+c9241820-f4d9-5969-a7bb-fac7ef14b117,14,Can and Can't: Ability,A1_CAN_CANT,Grammar,A1,2,1,100,true
+7e5b24a9-f0be-5f00-b117-71f28ac67276,15,Basic Prepositions of Time and Place,A1_BASIC_PREPOSITIONS,Grammar,A1,2,1,100,true
+e78b87e6-d98f-534a-9624-cb3196eaf48f,16,Basic Countable and Uncountable Nouns,A1_COUNTABLE_UNCOUNTABLE,Grammar,A1,2,1,100,true
+58d961a9-6bdb-5cda-b544-c3c0eee8c649,17,Past Simple,A2_PAST_SIMPLE,Grammar,A2,3,2,100,true
+d037fbb9-cdb3-5da4-be40-60b6f24833e5,18,Common Irregular Past Forms,A2_IRREGULAR_VERBS,Grammar,A2,3,2,100,true
+c898f67d-7ba7-5d1e-adca-c66e2465d855,19,Past Continuous,A2_PAST_CONTINUOUS,Grammar,A2,3,2,100,true
+cc72d61c-15dc-5660-b9ae-c70fb3db848d,20,Past Simple vs Past Continuous,A2_PAST_SIMPLE_VS_CONTINUOUS,Grammar,A2,3,2,100,true
+efbd45dc-61b0-56fd-9aeb-850344aaed4c,21,Future with Will,A2_FUTURE_WILL,Grammar,A2,3,2,100,true
+74567ee7-fd6c-5be8-8f04-a392f0b60f11,22,Be Going To,A2_GOING_TO,Grammar,A2,3,2,100,true
+697eaf71-0a4b-51ba-aae2-b1a852bc84df,23,Present Continuous for Future Arrangements,A2_FUTURE_ARRANGEMENTS,Grammar,A2,3,2,100,true
+bd4c5946-cb70-5662-9459-dc7cefd0fe6e,24,Comparative Adjectives,A2_COMPARATIVES,Grammar,A2,3,2,100,true
+ce735ad6-4fed-5305-bc64-7e00267c5a3b,25,Superlative Adjectives,A2_SUPERLATIVES,Grammar,A2,4,2,100,true
+4e150fdf-a2ce-5020-af21-d80a532836a2,26,Must and Have To,A2_MUST_HAVE_TO,Grammar,A2,4,2,100,true
+caa02c4d-4aa1-51d4-aba2-74d4b9e019d9,27,Should and Shouldn't,A2_SHOULD,Grammar,A2,4,2,100,true
+8ae7d95d-87b0-508b-b10e-fabbda1d0a16,28,Present Perfect: Basic Use,A2_PRESENT_PERFECT_BASIC,Grammar,A2,4,2,100,true
+bd3f7987-58cc-5afc-bc78-b35aa6a2452b,29,Present Perfect vs Past Simple,A2_PRESENT_PERFECT_PAST_SIMPLE,Grammar,A2,4,2,100,true
+66bd2689-0d67-51f5-97e8-2d0579deaa11,30,First Conditional,A2_FIRST_CONDITIONAL,Grammar,A2,4,2,100,true
+6e8b508d-9f6e-5059-885a-c3c8517fbf8c,31,Too and Enough,A2_TOO_ENOUGH,Grammar,A2,4,2,100,true
+248e935c-1dbc-53a7-8a00-91b86d45c264,32,"Somebody, Anybody, Nobody and Everybody",A2_INDEFINITE_PRONOUNS,Grammar,A2,4,2,100,true
+39fd7e66-d5b7-5c1b-9d92-d9967d569ffd,33,Present Perfect Continuous,B1_PRESENT_PERFECT_CONTINUOUS,Grammar,B1,5,3,100,true
+50ede43f-d27e-5c4f-9d96-4be855fd8f32,34,Past Perfect,B1_PAST_PERFECT,Grammar,B1,5,3,100,true
+d30578e6-30da-54c1-af35-e519a6fe9411,35,Used To,B1_USED_TO,Grammar,B1,5,3,100,true
+54a85761-85ad-5659-88c8-0c6280eaa1ac,36,Gerunds and Infinitives,B1_GERUND_INFINITIVE,Grammar,B1,5,3,100,true
+f5b666ee-20e4-59d1-8046-02c24dec1f7c,37,Second Conditional,B1_SECOND_CONDITIONAL,Grammar,B1,5,3,100,true
+1fc71c2e-a7f2-5127-af41-59007eecccb9,38,Defining Relative Clauses,B1_DEFINING_RELATIVE_CLAUSES,Grammar,B1,5,3,100,true
+685f8a82-6589-5221-bba4-9e9fb8b3c1d9,39,Passive Voice: Present and Past,B1_BASIC_PASSIVE,Grammar,B1,5,3,100,true
+aaf99635-0cc5-5cfe-a8c1-c5e902e8e09a,40,Reported Statements,B1_REPORTED_STATEMENTS,Grammar,B1,5,3,100,true
+3cb6b6b9-a44a-5388-8058-9e5e676a4b5e,41,Reported Questions and Commands,B1_REPORTED_QUESTIONS,Grammar,B1,6,3,100,true
+cc3e25e1-3024-5b53-9e9c-7e1d9529d1b3,42,Modal Verbs of Present Deduction,B1_MODAL_DEDUCTION_PRESENT,Grammar,B1,6,3,100,true
+bfb814f4-5639-566c-8284-e6f716673346,43,"Modals of Permission, Obligation and Advice",B1_MODAL_PERMISSION_OBLIGATION,Grammar,B1,6,3,100,true
+d5c16168-b443-540d-86c3-4ed342ee33e1,44,Question Tags,B1_QUESTION_TAGS,Grammar,B1,6,3,100,true
+2e260651-58bf-524c-a390-bce18b8c2eaa,45,Common Phrasal Verbs,B1_PHRASAL_VERBS,Vocabulary,B1,6,3,100,true
+de44a449-aa40-5958-b7bd-6fc1b14f6be8,46,Common English Collocations,B1_COLLOCATIONS,Vocabulary,B1,6,3,100,true
+608d06c4-129d-5f28-8a3c-a871a5041ca3,47,Basic Word Formation,B1_WORD_FORMATION,Vocabulary,B1,6,3,100,true
+d84591e4-b071-5378-939d-bcafbded5db0,48,Vocabulary in Context,B1_VOCABULARY_CONTEXT,Vocabulary,B1,6,3,100,true
+290f5d85-2eb3-5517-bab3-3928c9dee44f,49,Future Continuous,B2_FUTURE_CONTINUOUS,Grammar,B2,7,4,100,true
+8dec8c4c-baaa-592c-9343-09cba12e1455,50,Future Perfect,B2_FUTURE_PERFECT,Grammar,B2,7,4,100,true
+6660a535-253b-5efb-a109-b6ba929a2fd8,51,Past Perfect Continuous,B2_PAST_PERFECT_CONTINUOUS,Grammar,B2,7,4,100,true
+8243fbb7-246b-5710-9098-c6a6c3562477,52,Advanced Narrative Tenses,B2_NARRATIVE_TENSES,Grammar,B2,7,4,100,true
+cb1ac3e5-3914-54f3-a3e7-facb82ddd2dd,53,Third Conditional,B2_THIRD_CONDITIONAL,Grammar,B2,7,4,100,true
+ef91028d-6fd1-5619-8f72-ae8cc12d2259,54,Mixed Conditionals,B2_MIXED_CONDITIONALS,Grammar,B2,7,4,100,true
+f58727da-d08d-53fa-9553-2e9bcf0caae3,55,Advanced Passive Voice,B2_ADVANCED_PASSIVE,Grammar,B2,7,4,100,true
+0fd9f8ae-ac91-54f5-a847-291b90790f95,56,Causative Have and Get,B2_CAUSATIVE,Grammar,B2,7,4,100,true
+b45ead73-1e4b-506f-92cc-c3a6784d80f9,57,Non-Defining Relative Clauses,B2_NON_DEFINING_RELATIVE,Grammar,B2,8,4,100,true
+1e2c6f6f-4ae6-595a-9662-50551ea40631,58,Advanced Reported Speech,B2_REPORTED_SPEECH_ADVANCED,Grammar,B2,8,4,100,true
+85466b5b-4948-538d-95bf-a811e1a253c5,59,Modal Verbs of Past Deduction,B2_MODAL_DEDUCTION_PAST,Grammar,B2,8,4,100,true
+e671d3d7-a45a-56e8-81cc-f8ca4439e805,60,Wish and If Only,B2_WISH_IF_ONLY,Grammar,B2,8,4,100,true
+8959f07c-6966-5bd0-ab25-19045846ec5e,61,Advanced Gerund and Infinitive Patterns,B2_ADVANCED_GERUND_INFINITIVE,Grammar,B2,8,4,100,true
+a47f3607-0551-56bc-86eb-28303d66dc21,62,Upper-Intermediate Phrasal Verbs,B2_PHRASAL_VERBS_ADVANCED,Vocabulary,B2,8,4,100,true
+44ceaaf7-55b0-573f-9939-e3c17c79357e,63,Academic Collocations,B2_ACADEMIC_COLLOCATIONS,Vocabulary,B2,8,4,100,true
+3eb818ca-96af-5ed0-9e4b-d363f458b76e,64,Upper-Intermediate Word Formation,B2_WORD_FORMATION_ADVANCED,Vocabulary,B2,8,4,100,true
+bdb1f36e-f514-5ca4-a1c0-7640c7c15fae,65,Inversion after Negative Adverbials,C1_NEGATIVE_INVERSION,Advanced Grammar,C1,9,5,100,true
+c0f5e2b8-c7cd-5d83-8caf-bdb2ab7cac30,66,Cleft Sentences and Emphasis,C1_CLEFT_SENTENCES,Advanced Grammar,C1,9,5,100,true
+4d147094-9eb6-58f8-ba0d-63f6b86b99b5,67,Participle Clauses,C1_PARTICIPLE_CLAUSES,Advanced Grammar,C1,9,5,100,true
+1e00c140-45ec-5da5-ab9a-ea0308430734,68,Reduced Relative Clauses,C1_REDUCED_RELATIVES,Advanced Grammar,C1,9,5,100,true
+a7fb5c8a-5103-5d64-9e41-a9f793c66621,69,Inverted Conditionals,C1_INVERTED_CONDITIONALS,Advanced Grammar,C1,9,5,100,true
+c2caec8a-3aaa-5ed8-8b99-29911811a500,70,Subjunctive and Formal Structures,C1_SUBJUNCTIVE,Advanced Grammar,C1,9,5,100,true
+4ac5d450-67d5-540e-8657-7ba9cf1e5ecb,71,Advanced Modal Perfect Structures,C1_MODAL_PERFECT,Advanced Grammar,C1,9,5,100,true
+c9231371-8603-5f30-97dc-f55235f16b03,72,Advanced Reporting and Passive Structures,C1_REPORTING_PASSIVE,Advanced Grammar,C1,9,5,100,true
+873e3766-ffcc-5111-8fed-e36298988dc1,73,Nominalisation,C1_NOMINALISATION,Use of English,C1,10,5,100,true
+93dfe09a-b8fc-5728-b219-7f79712a996a,74,Advanced Word Formation,C1_ADVANCED_WORD_FORMATION,Vocabulary,C1,10,5,100,true
+72efbd6f-d340-5ff1-bec4-f3f537c81a0e,75,Idiomatic Language and Expressions,C1_IDIOMATIC_LANGUAGE,Vocabulary,C1,10,5,100,true
+0eb9cd0f-dbb2-5787-a5fb-0469c63bc6ef,76,Advanced Collocations,C1_ADVANCED_COLLOCATIONS,Vocabulary,C1,10,5,100,true
+6e7e0e9b-5f93-5ec5-b3e0-60855233abbb,77,Advanced Discourse Markers and Cohesion,C1_DISCOURSE_MARKERS,Use of English,C1,10,5,100,true
+56799fdd-0d94-5b2d-a4f1-5d0a80d255bf,78,Advanced Sentence Transformation,C1_SENTENCE_TRANSFORMATION,Use of English,C1,10,5,100,true
+e788e8d2-e2d2-57a2-a782-46cbeee135de,79,Advanced Error Identification,C1_ERROR_IDENTIFICATION,Use of English,C1,10,5,100,true
+0f1fd7e6-518e-5c21-af74-0d2438a68797,80,Lexical Precision and Register,C1_LEXICAL_PRECISION,Vocabulary,C1,10,5,100,true

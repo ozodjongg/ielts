@@ -1,0 +1,29 @@
+{
+  "generated_at_utc": "2026-08-23T09:10:38.243893+00:00",
+  "source_parallel_pairs": 173157,
+  "candidate_unique_entries_after_filtering": 123715,
+  "output_rows": 100000,
+  "unique_normalized_english": 100000,
+  "empty_english": 0,
+  "empty_uzbek": 0,
+  "cefr_counts": {
+    "A1": 10000,
+    "A2": 15000,
+    "B1": 20000,
+    "B2": 25000,
+    "C1": 20000,
+    "C2": 10000
+  },
+  "entry_type_counts": {
+    "word": 332,
+    "phrase": 7809,
+    "expression": 91859
+  },
+  "frequency_rank_min": 1,
+  "frequency_rank_max": 100000,
+  "synonym_groups": 47,
+  "synonym_edges": 94,
+  "cefr_method": "heuristic_opus_frequency_v1",
+  "cefr_official": false,
+  "source": "OPUS-100 en-uz v1.0"
+}

@@ -1,0 +1,13 @@
+.git
+.gitignore
+.vscode
+.idea
+.local-run
+.runtime
+**/node_modules
+**/.next
+apps
+*.zip
+*.log
+data/vocabulary/legacy_opus
+data/vocabulary/sources

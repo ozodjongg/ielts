@@ -1,0 +1,81 @@
+code,domain,name,difficulty,base_points,question_count
+ALG01,Algebra,Linear equations in one variable,2,1,100
+ALG02,Algebra,Linear equations with fractions,3,1,100
+ALG03,Algebra,Linear inequalities,3,1,100
+ALG04,Algebra,Systems of two linear equations,4,2,100
+ALG05,Algebra,Systems in word problems,5,2,100
+ALG06,Algebra,Slope from two points,2,1,100
+ALG07,Algebra,Equation of a line,3,1,100
+ALG08,Algebra,Parallel and perpendicular lines,4,2,100
+ALG09,Algebra,Intercepts of linear equations,3,1,100
+ALG10,Algebra,Evaluating linear functions,2,1,100
+ALG11,Algebra,Rates of change,3,1,100
+ALG12,Algebra,Linear percent relationships,4,2,100
+ALG13,Algebra,Absolute value equations,4,2,100
+ALG14,Algebra,No solution and infinitely many solutions,5,2,100
+ALG15,Algebra,Parameters in linear equations,5,2,100
+ALG16,Algebra,Direct variation,3,1,100
+ALG17,Algebra,Linear unit conversions,3,1,100
+ALG18,Algebra,Mixture equations,5,2,100
+ALG19,Algebra,Age word problems,4,2,100
+ALG20,Algebra,"Distance, rate, and time",4,2,100
+ADV01,Advanced Math,Roots of quadratic equations,5,2,100
+ADV02,Advanced Math,Vertex of a parabola,5,2,100
+ADV03,Advanced Math,Factoring quadratics,5,2,100
+ADV04,Advanced Math,Quadratic discriminant,6,3,100
+ADV05,Advanced Math,Polynomial evaluation,4,2,100
+ADV06,Advanced Math,Polynomial remainder theorem,6,3,100
+ADV07,Advanced Math,Rational equations,6,3,100
+ADV08,Advanced Math,Simplifying rational expressions,5,2,100
+ADV09,Advanced Math,Exponent rules,4,2,100
+ADV10,Advanced Math,Exponential growth,5,2,100
+ADV11,Advanced Math,Exponential decay,5,2,100
+ADV12,Advanced Math,Radical equations,6,3,100
+ADV13,Advanced Math,Function composition,5,2,100
+ADV14,Advanced Math,Inverse functions,5,2,100
+ADV15,Advanced Math,Linear-quadratic systems,7,3,100
+ADV16,Advanced Math,Complex numbers,6,3,100
+ADV17,Advanced Math,Polynomial degree and leading terms,5,2,100
+ADV18,Advanced Math,Function transformations,5,2,100
+ADV19,Advanced Math,Equations in equivalent forms,6,3,100
+ADV20,Advanced Math,Equivalent algebraic expressions,6,3,100
+PSDA01,Problem Solving and Data Analysis,Ratios,2,1,100
+PSDA02,Problem Solving and Data Analysis,Proportions,3,1,100
+PSDA03,Problem Solving and Data Analysis,Percent change,3,1,100
+PSDA04,Problem Solving and Data Analysis,Weighted averages,5,2,100
+PSDA05,Problem Solving and Data Analysis,Mean and median,3,1,100
+PSDA06,Problem Solving and Data Analysis,Range and spread,3,1,100
+PSDA07,Problem Solving and Data Analysis,Basic probability,3,1,100
+PSDA08,Problem Solving and Data Analysis,Conditional probability,6,3,100
+PSDA09,Problem Solving and Data Analysis,Two-way tables,5,2,100
+PSDA10,Problem Solving and Data Analysis,Interpreting scatterplots,4,2,100
+PSDA11,Problem Solving and Data Analysis,Linear model predictions,4,2,100
+PSDA12,Problem Solving and Data Analysis,Sampling and inference,6,3,100
+PSDA13,Problem Solving and Data Analysis,Margin of error,6,3,100
+PSDA14,Problem Solving and Data Analysis,Unit rates,3,1,100
+PSDA15,Problem Solving and Data Analysis,Density and derived units,4,2,100
+PSDA16,Problem Solving and Data Analysis,Unit conversion in context,4,2,100
+PSDA17,Problem Solving and Data Analysis,Percentages from data tables,4,2,100
+PSDA18,Problem Solving and Data Analysis,Exponential models in context,6,3,100
+PSDA19,Problem Solving and Data Analysis,Quartiles and medians,5,2,100
+PSDA20,Problem Solving and Data Analysis,Comparing variability,5,2,100
+GEO01,Geometry and Trigonometry,Area of triangles,2,1,100
+GEO02,Geometry and Trigonometry,Area and perimeter of rectangles,2,1,100
+GEO03,Geometry and Trigonometry,Area of circles,3,1,100
+GEO04,Geometry and Trigonometry,Circumference of circles,3,1,100
+GEO05,Geometry and Trigonometry,Pythagorean theorem,3,1,100
+GEO06,Geometry and Trigonometry,Similar triangles,5,2,100
+GEO07,Geometry and Trigonometry,Angles with parallel lines,4,2,100
+GEO08,Geometry and Trigonometry,Interior angles of polygons,4,2,100
+GEO09,Geometry and Trigonometry,Regular polygons,5,2,100
+GEO10,Geometry and Trigonometry,Volume of rectangular prisms,3,1,100
+GEO11,Geometry and Trigonometry,Volume of cylinders,4,2,100
+GEO12,Geometry and Trigonometry,Volume of spheres,5,2,100
+GEO13,Geometry and Trigonometry,Distance in the coordinate plane,4,2,100
+GEO14,Geometry and Trigonometry,Midpoints in the coordinate plane,3,1,100
+GEO15,Geometry and Trigonometry,Perpendicular slopes,4,2,100
+GEO16,Geometry and Trigonometry,Right-triangle trigonometry,6,3,100
+GEO17,Geometry and Trigonometry,Special right triangles,6,3,100
+GEO18,Geometry and Trigonometry,Arc length,6,3,100
+GEO19,Geometry and Trigonometry,Sector area,6,3,100
+GEO20,Geometry and Trigonometry,Equations of circles,6,3,100

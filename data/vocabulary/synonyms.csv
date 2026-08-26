@@ -1,0 +1,95 @@
+english,synonym,weight,source
+(current),%1 (current),0.8,OPUS-100 exact-Uzbek-translation heuristic
+A0,A1,0.8,OPUS-100 exact-Uzbek-translation heuristic
+A0,A2,0.8,OPUS-100 exact-Uzbek-translation heuristic
+A0,A7,0.8,OPUS-100 exact-Uzbek-translation heuristic
+A0,A6,0.8,OPUS-100 exact-Uzbek-translation heuristic
+A0,A5,0.8,OPUS-100 exact-Uzbek-translation heuristic
+A0,A8,0.8,OPUS-100 exact-Uzbek-translation heuristic
+A0,A10,0.8,OPUS-100 exact-Uzbek-translation heuristic
+page,& Page,0.8,OPUS-100 exact-Uzbek-translation heuristic
+page,Page %1,0.8,OPUS-100 exact-Uzbek-translation heuristic
+page,Page: %1/ %2,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Other:,_Other…,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Other:,Other...,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Other:,Other (%1),0.8,OPUS-100 exact-Uzbek-translation heuristic
+Other:,add,0.8,OPUS-100 exact-Uzbek-translation heuristic
+& Other...,Others,0.8,OPUS-100 exact-Uzbek-translation heuristic
+& Other...,Others:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+& Other...,Others...,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Command,Command:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+“What!,Now?,0.8,OPUS-100 exact-Uzbek-translation heuristic
+“What!,'Now?,0.8,OPUS-100 exact-Uzbek-translation heuristic
+FILE,_File,0.8,OPUS-100 exact-Uzbek-translation heuristic
+FILE,File:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+FILE,_File:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+FILE,[FILE…],0.8,OPUS-100 exact-Uzbek-translation heuristic
+FILE,%1 File,0.8,OPUS-100 exact-Uzbek-translation heuristic
+FILE,Files,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Folder:,_Files,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Folder:,Files:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Folder:,& Files,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Folder:,_Files:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+All,& All,0.8,OPUS-100 exact-Uzbek-translation heuristic
+All,Everything,0.8,OPUS-100 exact-Uzbek-translation heuristic
+(never),& Never,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Sign,& Sign,0.8,OPUS-100 exact-Uzbek-translation heuristic
+_Desktop,& Desktop,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Folder,_Folder:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Folder,& Folder:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+_Send,Send:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+_Send,& Send,0.8,OPUS-100 exact-Uzbek-translation heuristic
+_Send,Send...,0.8,OPUS-100 exact-Uzbek-translation heuristic
+_Send,"Send ""%1""",0.8,OPUS-100 exact-Uzbek-translation heuristic
+After,_After:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+From,From:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+From,& From:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Show,& Show,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Day,& Day,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Text:,Text %1,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Text:,& Text:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+What,What: %1,0.8,OPUS-100 exact-Uzbek-translation heuristic
+name,_Name,0.8,OPUS-100 exact-Uzbek-translation heuristic
+name,_Name:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+name,Name: %1,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Right:,Light:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+& Right:,Night,0.8,OPUS-100 exact-Uzbek-translation heuristic
+_Open…,& Open,0.8,OPUS-100 exact-Uzbek-translation heuristic
+_Open…,& Open...,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Remove,_Remove,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Remove,& Remove,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Until,End:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Window,& Window,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Find,Find:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Find,Find…,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Find,_Find…,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Find,_Find:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Find,& Find:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+& Add,Add...,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Image,_Image:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Last,List:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Last,& List,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Hour:,24:00 Hour,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Selected,Selected:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+S:,New:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Select,_Select,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Taste!,'Taste!,0.8,OPUS-100 exact-Uzbek-translation heuristic
+& Right,& Left:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+time,Time 1,0.8,OPUS-100 exact-Uzbek-translation heuristic
+time,& Time:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Message,Message:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+My %1,%1's %2,0.8,OPUS-100 exact-Uzbek-translation heuristic
+By %1,Error.,0.8,OPUS-100 exact-Uzbek-translation heuristic
+By %1,Error:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+By %1,Error!,0.8,OPUS-100 exact-Uzbek-translation heuristic
+By %1,Error: %1,0.8,OPUS-100 exact-Uzbek-translation heuristic
+By %1,Error: %1?,0.8,OPUS-100 exact-Uzbek-translation heuristic
+New,& New:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+New,& New...,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Created,Created:,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Path:,& Path,0.8,OPUS-100 exact-Uzbek-translation heuristic
+no,none,0.8,OPUS-100 exact-Uzbek-translation heuristic
+no,_None,0.8,OPUS-100 exact-Uzbek-translation heuristic
+no,(None),0.8,OPUS-100 exact-Uzbek-translation heuristic
+no,& None,0.8,OPUS-100 exact-Uzbek-translation heuristic
+Help,_Help,0.8,OPUS-100 exact-Uzbek-translation heuristic

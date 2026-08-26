@@ -1,0 +1,17 @@
+{
+  "version": "sat-math-v5.0.0",
+  "question_count": 8000,
+  "topic_count": 80,
+  "variants_per_topic": 100,
+  "domains": {
+    "Advanced Math": 2000,
+    "Algebra": 2000,
+    "Geometry and Trigonometry": 2000,
+    "Problem Solving and Data Analysis": 2000
+  },
+  "unique_ids": 8000,
+  "correct_option_errors": 0,
+  "duplicate_prompts": 0,
+  "practice_form_fallbacks": 1888,
+  "copyright": "Original programmatically generated SAT-style practice content; not official College Board material."
+}

@@ -1,0 +1,154 @@
+name: assessment-platform-v5-monolith
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-v5}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-app}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-v5} -d ${POSTGRES_DB:-app}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      BACKEND_ADDR: :8080
+      DATABASE_URL: postgres://${POSTGRES_USER:-v5}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable
+      AUTO_MIGRATE: "false"
+      VOCAB_AUTO_IMPORT: "true"
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?set AUTH_JWT_SECRET}
+      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-assessment-platform-v5}
+      AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-assessment-platform}
+      AUTH_ACCESS_TTL_MINUTES: ${AUTH_ACCESS_TTL_MINUTES:-15}
+      AUTH_REFRESH_TTL_DAYS: ${AUTH_REFRESH_TTL_DAYS:-30}
+      INTERNAL_SIGNING_SECRET: ${INTERNAL_SIGNING_SECRET:?set INTERNAL_SIGNING_SECRET}
+      PLAYBACK_SIGNING_SECRET: ${PLAYBACK_SIGNING_SECRET:?set PLAYBACK_SIGNING_SECRET}
+      QUESTION_SHUFFLE_SECRET: ${QUESTION_SHUFFLE_SECRET:?set QUESTION_SHUFFLE_SECRET}
+      ADMIN_ORIGINS: ${ADMIN_ORIGINS:-http://localhost:3001}
+      CENTER_ORIGINS: ${CENTER_ORIGINS:-http://localhost:3002}
+      STUDENT_ORIGINS: ${STUDENT_ORIGINS:-http://localhost:3003}
+      REQUIRE_ADMIN_AAL2: ${REQUIRE_ADMIN_AAL2:-false}
+      REQUIRE_CENTER_AAL2: ${REQUIRE_CENTER_AAL2:-false}
+      GATEWAY_RATE_LIMIT_PER_MINUTE: ${GATEWAY_RATE_LIMIT_PER_MINUTE:-600}
+      GATEWAY_AUTH_RATE_LIMIT_PER_MINUTE: ${GATEWAY_AUTH_RATE_LIMIT_PER_MINUTE:-30}
+      VOCAB_DAILY_NEW: ${VOCAB_DAILY_NEW:-10}
+      VOCAB_DAILY_REVIEW: ${VOCAB_DAILY_REVIEW:-10}
+      LISTENING_MAX_UPLOAD_MB: ${LISTENING_MAX_UPLOAD_MB:-50}
+      REVIEW_MAX_AUDIO_MB: ${REVIEW_MAX_AUDIO_MB:-20}
+      DB_MAX_CONNS: ${DB_MAX_CONNS:-4}
+      DB_MIN_CONNS: ${DB_MIN_CONNS:-0}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    volumes:
+      - listening_private:/data/private/listening
+      - review_private:/data/private/review
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/ready >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 15s
+
+  admin-web:
+    build:
+      context: ./apps/admin-web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3001:3000"
+
+  center-web:
+    build:
+      context: ./apps/center-web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3002:3000"
+
+  student-web:
+    build:
+      context: ./apps/student-web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3003:3000"
+
+  compact-migrate:
+    profiles: ["tools"]
+    build:
+      context: ./backend
+      args: { SERVICE: compact-migrate }
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-v5}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable
+      MIGRATIONS_DIR: /migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend/migrations:/migrations:ro
+
+  bootstrap-admin:
+    profiles: ["tools"]
+    build:
+      context: ./backend
+      args: { SERVICE: bootstrap-admin }
+    environment:
+      IDENTITY_DATABASE_URL: postgres://${POSTGRES_USER:-v5}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable&search_path=identity
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  reset-password:
+    profiles: ["tools"]
+    build:
+      context: ./backend
+      args: { SERVICE: reset-password }
+    environment:
+      IDENTITY_DATABASE_URL: postgres://${POSTGRES_USER:-v5}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable&search_path=identity
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  vocab-import:
+    profiles: ["tools"]
+    build:
+      context: ./backend
+      args: { SERVICE: vocab-import }
+    environment:
+      VOCABULARY_DATABASE_URL: postgres://${POSTGRES_USER:-v5}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable&search_path=vocabulary
+    depends_on:
+      backend:
+        condition: service_healthy
+    volumes:
+      - ./data/vocabulary:/import:ro
+
+volumes:
+  postgres_data:
+  listening_private:
+  review_private:
