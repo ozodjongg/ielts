@@ -104,12 +104,15 @@ SQL
         if [ "$AGE_SECONDS" -ge "$IMPORT_STALE_SECONDS" ]; then
           echo "[startup] stale vocabulary import claim detected (${AGE_SECONDS}s old); recovering it."
           DELETED="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
-            -v version="$DATASET_VERSION" -v stale="$IMPORT_STALE_SECONDS" -At <<'SQL'
-DELETE FROM vocabulary.dataset_versions
-WHERE version=:'version'
-  AND status='importing'
-  AND started_at < now() - make_interval(secs => :'stale'::integer)
-RETURNING 'deleted';
+            -v version="$DATASET_VERSION" -v stale="$IMPORT_STALE_SECONDS" -qAt <<'SQL'
+WITH deleted AS (
+  DELETE FROM vocabulary.dataset_versions
+  WHERE version=:'version'
+    AND status='importing'
+    AND started_at < now() - make_interval(secs => :'stale'::integer)
+  RETURNING 1
+)
+SELECT CASE WHEN EXISTS (SELECT 1 FROM deleted) THEN 'deleted' ELSE '' END;
 SQL
 )"
           if [ "$DELETED" = "deleted" ]; then
@@ -138,13 +141,22 @@ SQL
     if [ -n "$WORDS_FILE" ]; then
       CLAIM="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
         -v version="$DATASET_VERSION" -v words_hash="$WORDS_HASH" -v synonyms_hash="$SYNONYMS_HASH" \
-        -v owner="$OWNER_TOKEN" -At <<'SQL'
-INSERT INTO vocabulary.dataset_versions(version,status,words_sha256,synonyms_sha256,owner_token,started_at,row_count)
-VALUES(:'version','importing',:'words_hash',nullif(:'synonyms_hash',''),:'owner',now(),0)
-ON CONFLICT(version) DO NOTHING
-RETURNING 'claimed';
+        -v owner="$OWNER_TOKEN" -qAt <<'SQL'
+WITH claimed AS (
+  INSERT INTO vocabulary.dataset_versions(
+      version,status,words_sha256,synonyms_sha256,owner_token,started_at,row_count
+  )
+  VALUES(
+      :'version','importing',:'words_hash',nullif(:'synonyms_hash',''),:'owner',now(),0
+  )
+  ON CONFLICT(version) DO NOTHING
+  RETURNING 1
+)
+SELECT CASE WHEN EXISTS (SELECT 1 FROM claimed) THEN 'claimed' ELSE '' END;
 SQL
 )"
+
+      echo "[startup] vocabulary claim result: ${CLAIM:-<empty>}"
 
       if [ "$CLAIM" != "claimed" ]; then
         echo "[startup] vocabulary $DATASET_VERSION was claimed concurrently; starting backend and leaving import to the owner."
@@ -171,12 +183,21 @@ SQL
       ROW_COUNT="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -tAc "SELECT count(*) FROM vocabulary.lexemes WHERE active=true" | tr -d '[:space:]')"
       UPDATED="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 \
         -v version="$DATASET_VERSION" -v rows="${ROW_COUNT:-0}" \
-        -v words_hash="$WORDS_HASH" -v synonyms_hash="$SYNONYMS_HASH" -v owner="$OWNER_TOKEN" -At <<'SQL'
-UPDATE vocabulary.dataset_versions
-SET status='complete', imported_at=now(), row_count=:'rows'::integer,
-    words_sha256=:'words_hash', synonyms_sha256=nullif(:'synonyms_hash',''), owner_token=NULL
-WHERE version=:'version' AND status='importing' AND owner_token=:'owner'
-RETURNING 'complete';
+        -v words_hash="$WORDS_HASH" -v synonyms_hash="$SYNONYMS_HASH" -v owner="$OWNER_TOKEN" -qAt <<'SQL'
+WITH completed AS (
+  UPDATE vocabulary.dataset_versions
+  SET status='complete',
+      imported_at=now(),
+      row_count=:'rows'::integer,
+      words_sha256=:'words_hash',
+      synonyms_sha256=nullif(:'synonyms_hash',''),
+      owner_token=NULL
+  WHERE version=:'version'
+    AND status='importing'
+    AND owner_token=:'owner'
+  RETURNING 1
+)
+SELECT CASE WHEN EXISTS (SELECT 1 FROM completed) THEN 'complete' ELSE '' END;
 SQL
 )"
       if [ "$UPDATED" != "complete" ]; then
