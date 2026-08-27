@@ -67,7 +67,7 @@ SQL
     # claims. Most importantly, a live claim never causes a crash/restart loop.
     WAITED=0
     while [ -n "$WORDS_FILE" ]; do
-      STATE="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v version="$DATASET_VERSION" -At <<'SQL'
+      STATE="$(psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -v version="$DATASET_VERSION" -qAt <<'SQL'
 SELECT status || '|' || coalesce(words_sha256,'') || '|' || coalesce(synonyms_sha256,'') || '|' ||
        greatest(0, extract(epoch FROM (now()-started_at))::bigint)::text
 FROM vocabulary.dataset_versions
