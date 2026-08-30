@@ -9,10 +9,10 @@ import {
   FileCheck2,
   Headphones,
   Languages,
-  BookPlus,
   LayoutDashboard,
   Settings,
-  Sigma,
+  ShieldCheck,
+  UserCog,
   Users,
   UsersRound,
   Zap
@@ -24,16 +24,16 @@ import { ThemeToggle } from "@/components/theme-provider";
 const nav = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/students", label: "Students", icon: Users },
+  { href: "/teachers", label: "Teachers", icon: UserCog },
   { href: "/groups", label: "Groups", icon: UsersRound },
-  { href: "/assessments", label: "English Tests", icon: ClipboardCheck },
+  { href: "/services", label: "Services", icon: ClipboardCheck },
   { href: "/listening", label: "Listening", icon: Headphones },
   { href: "/reviews", label: "Reviews", icon: FileCheck2 },
-  { href: "/sat", label: "SAT Math", icon: Sigma },
   { href: "/dictionary", label: "Dictionary", icon: Languages },
-  { href: "/vocabulary-manager", label: "Vocabulary Manager", icon: BookPlus },
   { href: "/points", label: "Rush Points", icon: Zap },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
-  { href: "/settings", label: "Settings", icon: Settings }
+  { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/security", label: "Security", icon: ShieldCheck }
 ];
 
 export function PortalShell({ children }: { children: ReactNode }) {
@@ -48,7 +48,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
   }, [auth.loading, auth.profile, pathname, router]);
 
   if (auth.loading) {
-    return <div className="login-wrap"><div className="muted">V5 portal yuklanmoqda…</div></div>;
+    return <div className="login-wrap"><div className="muted">IELTS portal yuklanmoqda…</div></div>;
   }
   if (!auth.profile) return null;
 
@@ -56,8 +56,8 @@ export function PortalShell({ children }: { children: ReactNode }) {
     <div className="shell">
       <aside className="sidebar" aria-label="Primary navigation">
         <div className="brand">
-          <span className="brandmark" aria-hidden="true">V5</span>
-          <div>V5 Learning Center<div className="muted" style={{ fontSize: 11, fontWeight: 500 }}>Learning-center administration portal</div></div>
+          <span className="brandmark" aria-hidden="true">IELTS</span>
+          <div>IELTS Center<div className="muted" style={{ fontSize: 11, fontWeight: 500 }}>Learning-center administration portal</div></div>
         </div>
         <nav className="nav">
           {nav.map((item) => {
@@ -87,7 +87,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
         <div className="content">{children}</div>
       </main>
       <nav className="mobile-nav" aria-label="Mobile navigation">
-        {nav.slice(0, 7).map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}
+        {nav.map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}
       </nav>
     </div>
   );

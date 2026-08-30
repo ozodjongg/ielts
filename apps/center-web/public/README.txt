@@ -1,1 +1,1 @@
-V5 portal static assets directory.
+IELTS portal static assets directory.

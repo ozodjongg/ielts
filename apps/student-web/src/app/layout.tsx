@@ -5,8 +5,8 @@ import { ThemeProvider, ThemeToaster } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
   title: { default: "IELTS Student", template: "%s · IELTS Student" },
-  description: "Secure student learning and assessment workspace for Assessment Platform IELTS.",
-  applicationName: "Assessment Platform IELTS",
+  description: "Responsive IELTS learning, vocabulary and assessment workspace.",
+  applicationName: "IELTS Platform",
   category: "education",
   formatDetection: { email: false, address: false, telephone: false },
   robots: {

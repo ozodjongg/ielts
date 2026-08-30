@@ -484,7 +484,7 @@ def main():
     }
     for d in sorted({t.domain for t in TOPICS}): qa['domains'][d]=sum(r['domain']==d for r in rows)
     (OUT/'QA.json').write_text(json.dumps(qa,indent=2),encoding='utf-8')
-    (OUT/'README.md').write_text('''# SAT Math V5 bank\n\n8,000 original SAT-style English-language math questions, generated as 80 topics × 100 equivalent variants.\n\n- `questions.csv`: private server bank including canonical answer and explanation.\n- `questions_public.csv`: answer-free bank useful for inspection only; production API still serves one question at a time.\n- `topics.csv`: topic metadata.\n- `QA.json`: generation QA summary.\n\nThis is original practice content and is **not official College Board material**.\n''',encoding='utf-8')
+    (OUT/'README.md').write_text('''# IELTS SAT Math practice bank\n\n8,000 original SAT-style English-language math questions, generated as 80 topics × 100 equivalent variants.\n\n- `questions.csv`: private server bank including canonical answer and explanation.\n- `questions_public.csv`: answer-free bank useful for inspection only; production API still serves one question at a time.\n- `topics.csv`: topic metadata.\n- `QA.json`: generation QA summary.\n\nThis is original practice content and is **not official College Board material**.\n''',encoding='utf-8')
     print(json.dumps(qa,indent=2))
 
 if __name__=='__main__': main()

@@ -9,20 +9,21 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/assessment-platform-v5/internal/auth"
-	"github.com/example/assessment-platform-v5/internal/authz"
-	"github.com/example/assessment-platform-v5/internal/passwordhash"
-	"github.com/example/assessment-platform-v5/internal/webx"
+	"github.com/example/ielts-platform/internal/auth"
+	"github.com/example/ielts-platform/internal/authz"
+	"github.com/example/ielts-platform/internal/passwordhash"
+	"github.com/example/ielts-platform/internal/webx"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Service struct {
-	DB             *pgxpool.Pool
-	Signer         *auth.Signer
-	RefreshTTL     time.Duration
-	InternalSecret string
+	DB               *pgxpool.Pool
+	Signer           *auth.Signer
+	RefreshTTL       time.Duration
+	InternalSecret   string
+	MFAEncryptionKey string
 }
 type Profile struct {
 	UserID         string  `json:"user_id"`
@@ -44,14 +45,21 @@ func (s *Service) Router() http.Handler {
 	m.HandleFunc("POST /internal/auth/login", webx.Handle(s.internalLogin))
 	m.HandleFunc("POST /internal/auth/refresh", webx.Handle(s.internalRefresh))
 	m.HandleFunc("POST /internal/auth/logout", webx.Handle(s.internalLogout))
+	m.HandleFunc("POST /internal/auth/mfa-verify", webx.Handle(s.internalMFAVerify))
 	m.HandleFunc("POST /internal/users", webx.Handle(s.internalCreateUser))
 	m.HandleFunc("GET /internal/students", webx.Handle(s.internalListStudents))
+	m.HandleFunc("GET /internal/users", webx.Handle(s.internalListUsers))
+	m.HandleFunc("PATCH /internal/managed-users/{id}", webx.Handle(s.internalUpdateManagedUser))
 	m.HandleFunc("PATCH /internal/users/{id}", webx.Handle(s.internalUpdateStudent))
 	m.HandleFunc("DELETE /internal/users/{id}", webx.Handle(s.internalDeleteUser))
 	m.HandleFunc("PATCH /internal/users/{id}/level", webx.Handle(s.internalSetLevel))
 	m.HandleFunc("GET /v1/me", webx.Handle(s.me))
 	m.HandleFunc("PATCH /v1/me", webx.Handle(s.updateMe))
 	m.HandleFunc("PATCH /v1/me/password", webx.Handle(s.changePassword))
+	m.HandleFunc("GET /v1/mfa/status", webx.Handle(s.mfaStatus))
+	m.HandleFunc("POST /v1/mfa/setup", webx.Handle(s.mfaSetup))
+	m.HandleFunc("POST /v1/mfa/verify", webx.Handle(s.mfaSetupVerify))
+	m.HandleFunc("POST /v1/mfa/disable", webx.Handle(s.mfaDisable))
 	return webx.Security(m)
 }
 func (s *Service) actor(r *http.Request) (authz.Actor, error) {
@@ -128,7 +136,7 @@ type CreateUserRequest struct {
 }
 
 func validateCreate(x CreateUserRequest) error {
-	if x.Role != "platform_admin" && x.Role != "center_admin" && x.Role != "student" {
+	if x.Role != "admin" && x.Role != "center" && x.Role != "teacher" && x.Role != "student" {
 		return webx.E(400, "role", "invalid role")
 	}
 	if !strings.Contains(x.Email, "@") || len(x.Email) > 254 {
@@ -140,10 +148,10 @@ func validateCreate(x CreateUserRequest) error {
 	if strings.TrimSpace(x.FullName) == "" || len(x.FullName) > 120 {
 		return webx.E(400, "full_name", "full name required")
 	}
-	if x.Role == "platform_admin" && x.OrganizationID != nil {
+	if x.Role == "admin" && x.OrganizationID != nil {
 		return webx.E(400, "organization", "platform admin cannot belong to a center")
 	}
-	if x.Role != "platform_admin" && x.OrganizationID == nil {
+	if x.Role != "admin" && x.OrganizationID == nil {
 		return webx.E(400, "organization", "organization required")
 	}
 	return nil
@@ -419,7 +427,7 @@ func (s *Service) listStudents(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err = authz.Require(a, "center_admin"); err != nil {
+	if err = authz.Require(a, "center"); err != nil {
 		return webx.E(403, "forbidden", "center admin required")
 	}
 	rows, err := s.DB.Query(r.Context(), `SELECT user_id,organization_id,role,email,full_name,status,current_level,locale FROM profiles WHERE organization_id=$1 AND role='student' ORDER BY full_name`, a.OrgID)
@@ -446,7 +454,7 @@ func (s *Service) createStudent(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err = authz.Require(a, "center_admin"); err != nil {
+	if err = authz.Require(a, "center"); err != nil {
 		return webx.E(403, "forbidden", "center admin required")
 	}
 	var x CreateUserRequest
@@ -468,7 +476,7 @@ func (s *Service) updateStudent(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err = authz.Require(a, "center_admin"); err != nil {
+	if err = authz.Require(a, "center"); err != nil {
 		return webx.E(403, "forbidden", "center admin required")
 	}
 	id := r.PathValue("id")

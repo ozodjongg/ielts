@@ -67,7 +67,7 @@ export async function apiBlob(path: string, token: string, headers?: HeadersInit
 
 export const json = (method: string, body: unknown): RequestInit => ({ method, body: JSON.stringify(body) });
 
-export function portalPath(portal: "admin" | "center" | "student", service: string, path = "") {
+export function portalPath(portal: "admin" | "center" | "teacher" | "student", service: string, path = "") {
   if (!/^[a-z][a-z0-9_-]*$/.test(service)) throw new Error(`Invalid service name: ${service}`);
   const suffix = path ? (path.startsWith("/") ? path : `/${path}`) : "";
   return safePath(`/api/${portal}/${service}${suffix}`.replace(/\/$/, ""));

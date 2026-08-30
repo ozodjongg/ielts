@@ -1,0 +1,8 @@
+"use client";
+import {useEffect,useState} from "react";
+import {toast} from "sonner";
+import {api,portalPath} from "@/lib/api";
+import {useAuth} from "@/components/auth-provider";
+import {Card,PageHeader,Pill} from "@/components/ui";
+type Student={user_id:string;status:string};type HW={id:string;title:string;word_count:number;student_count:number;completed_count:number;due_at?:string|null};
+export default function TeacherOverview(){const auth=useAuth();const[students,setStudents]=useState<Student[]>([]);const[homework,setHomework]=useState<HW[]>([]);useEffect(()=>{if(!auth.session)return;void Promise.all([api<{items:Student[]}>(portalPath("teacher","tenant","/students"),auth.session.access_token),api<{items:HW[]}>(portalPath("teacher","vocabulary","/teacher/homework"),auth.session.access_token)]).then(([s,h])=>{setStudents(s.items||[]);setHomework(h.items||[])}).catch((e:Error)=>toast.error(e.message))},[auth.session]);return <><PageHeader title="Teacher overview" subtitle="Vocabulary, homework va student learning queue uchun kundalik workspace."/><div className="grid grid-3 section"><Card><div className="muted">Students</div><div className="metric">{students.length}</div></Card><Card><div className="muted">Active students</div><div className="metric">{students.filter(x=>x.status==="active").length}</div></Card><Card><div className="muted">Homework sets</div><div className="metric">{homework.length}</div></Card></div><div className="section grid grid-2">{homework.slice(0,6).map(h=><Card key={h.id}><div className="row-between"><b>{h.title}</b><Pill>{h.word_count} words</Pill></div><p className="muted">{h.completed_count}/{h.student_count} completed{h.due_at?` · due ${new Date(h.due_at).toLocaleDateString()}`:""}</p></Card>)}</div></>}

@@ -269,10 +269,10 @@ for go_file in MODULES.glob("*/*.go"):
         )
 
 # Gateway dispatches auth directly through the identity handler rather than
-# clientx, so include these three contracts explicitly.
+# clientx, so include these four contracts explicitly.
 gateway_file = MODULES / "gateway" / "service.go"
 gateway_text = gateway_file.read_text(encoding="utf-8")
-for action in ("login", "refresh", "logout"):
+for action in ("login", "refresh", "logout", "mfa-verify"):
     check_call(
         file=str(gateway_file.relative_to(ROOT)).replace("\\", "/"),
         line=gateway_text.find('path := "/internal/auth/"') and gateway_text[: gateway_text.find('path := "/internal/auth/"')].count("\n") + 1,

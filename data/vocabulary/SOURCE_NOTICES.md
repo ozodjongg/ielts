@@ -31,5 +31,5 @@ dictionary. It contains:
 Uzbek Cyrillic source text was deterministically transliterated to Latin script where present.
 No machine translation was invented to fill missing entries.
 
-CEFR values are frequency/complexity heuristics created for the V5 learning workflow and are not
+CEFR values are frequency/complexity heuristics created for the IELTS learning workflow and are not
 official CEFR annotations.

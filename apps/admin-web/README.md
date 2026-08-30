@@ -1,6 +1,6 @@
 # admin-web
 
-Next.js portal for Assessment Platform V5.
+Next.js portal for IELTS Platform.
 
 Local variable:
 

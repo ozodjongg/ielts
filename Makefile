@@ -15,7 +15,7 @@ logs:
 	docker compose logs -f --tail=150 backend
 
 qa:
-	python3 tools/qa_v5.py
+	python3 tools/qa_ielts.py
 
 sat-bank:
 	python3 tools/generate_sat_math_bank.py
@@ -30,7 +30,7 @@ backend-test:
 	cd backend && go test ./...
 
 frontend-check:
-	@for app in admin-web center-web student-web; do \
+	@for app in admin-web center-web teacher-web student-web; do \
 	  echo "== $$app =="; \
 	  (cd apps/$$app && corepack enable && pnpm install --frozen-lockfile && pnpm typecheck && pnpm lint && pnpm build) || exit 1; \
 	done

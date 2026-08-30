@@ -33,11 +33,11 @@ func ApplyAll(ctx context.Context, dsn, root string) error {
 	}
 	defer conn.Close(context.Background())
 
-	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock(hashtext('assessment-platform-v5:migrations'))`); err != nil {
+	if _, err := conn.Exec(ctx, `SELECT pg_advisory_lock(hashtext('ielts-platform:migrations'))`); err != nil {
 		return fmt.Errorf("acquire migration lock: %w", err)
 	}
 	defer func() {
-		_, _ = conn.Exec(context.Background(), `SELECT pg_advisory_unlock(hashtext('assessment-platform-v5:migrations'))`)
+		_, _ = conn.Exec(context.Background(), `SELECT pg_advisory_unlock(hashtext('ielts-platform:migrations'))`)
 	}()
 
 	for _, ext := range []string{"pgcrypto", "pg_trgm"} {

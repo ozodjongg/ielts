@@ -1,1 +1,0 @@
-man bu meni loyiham hamaisni qayta qayta ko'rib chiqqadmda qadam tahlil qilib, xatolarnji aniqlab , to'g'irlab saytni production ready qilib, deploy uchun sodda qilib qilib ber va qo'shimcha learning centerlar ujchun qo'shimcha page qilib ber u vocabulary table ga so'z qo'shsin shunday vocabulary table dagi yo'q so'zlarni qo'shib chiqsin, va menga loyihani jo'nat

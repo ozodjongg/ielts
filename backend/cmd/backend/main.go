@@ -14,23 +14,23 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/example/assessment-platform-v5/internal/auth"
-	"github.com/example/assessment-platform-v5/internal/bank"
-	"github.com/example/assessment-platform-v5/internal/clientx"
-	"github.com/example/assessment-platform-v5/internal/config"
-	"github.com/example/assessment-platform-v5/internal/dbx"
-	"github.com/example/assessment-platform-v5/internal/migrate"
-	"github.com/example/assessment-platform-v5/internal/webx"
-	"github.com/example/assessment-platform-v5/modules/analytics"
-	"github.com/example/assessment-platform-v5/modules/assessment"
-	"github.com/example/assessment-platform-v5/modules/gateway"
-	"github.com/example/assessment-platform-v5/modules/identity"
-	"github.com/example/assessment-platform-v5/modules/listening"
-	"github.com/example/assessment-platform-v5/modules/points"
-	"github.com/example/assessment-platform-v5/modules/review"
-	"github.com/example/assessment-platform-v5/modules/sat"
-	"github.com/example/assessment-platform-v5/modules/tenant"
-	"github.com/example/assessment-platform-v5/modules/vocabulary"
+	"github.com/example/ielts-platform/internal/auth"
+	"github.com/example/ielts-platform/internal/bank"
+	"github.com/example/ielts-platform/internal/clientx"
+	"github.com/example/ielts-platform/internal/config"
+	"github.com/example/ielts-platform/internal/dbx"
+	"github.com/example/ielts-platform/internal/migrate"
+	"github.com/example/ielts-platform/internal/webx"
+	"github.com/example/ielts-platform/modules/analytics"
+	"github.com/example/ielts-platform/modules/assessment"
+	"github.com/example/ielts-platform/modules/gateway"
+	"github.com/example/ielts-platform/modules/identity"
+	"github.com/example/ielts-platform/modules/listening"
+	"github.com/example/ielts-platform/modules/points"
+	"github.com/example/ielts-platform/modules/review"
+	"github.com/example/ielts-platform/modules/sat"
+	"github.com/example/ielts-platform/modules/tenant"
+	"github.com/example/ielts-platform/modules/vocabulary"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -174,8 +174,8 @@ func main() {
 
 	secret := requiredSigningSecret("INTERNAL_SIGNING_SECRET")
 	authSecret := requiredSigningSecret("AUTH_JWT_SECRET")
-	authIssuer := config.String("AUTH_JWT_ISSUER", "assessment-platform-v5")
-	authAudience := config.String("AUTH_JWT_AUDIENCE", "assessment-platform")
+	authIssuer := config.String("AUTH_JWT_ISSUER", "ielts-platform")
+	authAudience := config.String("AUTH_JWT_AUDIENCE", "ielts-platform")
 	accessTTL := time.Duration(config.Int("AUTH_ACCESS_TTL_MINUTES", 15)) * time.Minute
 	refreshDays := config.Int("AUTH_REFRESH_TTL_DAYS", 30)
 	if refreshDays < 1 || refreshDays > 365 {
@@ -188,10 +188,11 @@ func main() {
 	}
 
 	identitySvc := &identity.Service{
-		DB:             pools["identity"],
-		Signer:         signer,
-		RefreshTTL:     refreshTTL,
-		InternalSecret: secret,
+		DB:               pools["identity"],
+		Signer:           signer,
+		RefreshTTL:       refreshTTL,
+		InternalSecret:   secret,
+		MFAEncryptionKey: requiredSigningSecret("MFA_ENCRYPTION_KEY"),
 	}
 	identityRouter := identitySvc.Router()
 
@@ -292,19 +293,21 @@ func main() {
 	}
 
 	gatewaySvc := &gateway.Service{
-		IdentityHandler:   identityRouter,
-		Verifier:          verifier,
-		Identity:          clientx.NewLocal(identityRouter, secret, "gateway"),
-		InternalSecret:    secret,
-		Handlers:          handlers,
-		ReadyChecks:       readyChecks,
-		AdminOrigins:      config.CSV("ADMIN_ORIGINS"),
-		CenterOrigins:     config.CSV("CENTER_ORIGINS"),
-		StudentOrigins:    config.CSV("STUDENT_ORIGINS"),
-		RequireAdminAAL2:  config.Bool("REQUIRE_ADMIN_AAL2", false),
-		RequireCenterAAL2: config.Bool("REQUIRE_CENTER_AAL2", false),
-		Limiter:           gateway.NewLimiter(config.Int("GATEWAY_RATE_LIMIT_PER_MINUTE", 600), time.Minute),
-		AuthLimiter:       gateway.NewLimiter(config.Int("GATEWAY_AUTH_RATE_LIMIT_PER_MINUTE", 30), time.Minute),
+		IdentityHandler:    identityRouter,
+		Verifier:           verifier,
+		Identity:           clientx.NewLocal(identityRouter, secret, "gateway"),
+		InternalSecret:     secret,
+		Handlers:           handlers,
+		ReadyChecks:        readyChecks,
+		AdminOrigins:       config.CSV("ADMIN_ORIGINS"),
+		CenterOrigins:      config.CSV("CENTER_ORIGINS"),
+		TeacherOrigins:     config.CSV("TEACHER_ORIGINS"),
+		StudentOrigins:     config.CSV("STUDENT_ORIGINS"),
+		RequireAdminAAL2:   config.Bool("REQUIRE_ADMIN_AAL2", true),
+		RequireCenterAAL2:  config.Bool("REQUIRE_CENTER_AAL2", true),
+		RequireTeacherAAL2: config.Bool("REQUIRE_TEACHER_AAL2", true),
+		Limiter:            gateway.NewLimiter(config.Int("GATEWAY_RATE_LIMIT_PER_MINUTE", 600), time.Minute),
+		AuthLimiter:        gateway.NewLimiter(config.Int("GATEWAY_AUTH_RATE_LIMIT_PER_MINUTE", 30), time.Minute),
 	}
 
 	// Railway injects PORT dynamically. Prefer it when present, while keeping
@@ -318,7 +321,7 @@ func main() {
 	srv.WriteTimeout = 0
 
 	go func() {
-		slog.Info("assessment platform monolith ready",
+		slog.Info("IELTS platform monolith ready",
 			"addr", srv.Addr,
 			"modules", len(handlers),
 			"english_questions", len(englishBank.Questions),

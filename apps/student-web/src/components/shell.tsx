@@ -11,9 +11,9 @@ import {
   Languages,
   BrainCircuit,
   Mic2,
-  Sigma,
   Trophy,
-  UserRound
+  UserRound,
+  ListChecks
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { Button, Pill } from "@/components/ui";
@@ -21,11 +21,11 @@ import { ThemeToggle } from "@/components/theme-provider";
 
 const nav = [
   { href: "/", label: "Home", icon: House },
-  { href: "/english", label: "English", icon: BookOpenCheck },
+  { href: "/services", label: "Services", icon: BookOpenCheck },
   { href: "/vocabulary", label: "Vocabulary", icon: Languages },
+  { href: "/assigned", label: "Assigned", icon: ListChecks },
   { href: "/review", label: "Review", icon: BrainCircuit },
   { href: "/listening", label: "Listening", icon: Headphones },
-  { href: "/sat", label: "SAT Math", icon: Sigma },
   { href: "/submissions", label: "Speaking & Writing", icon: Mic2 },
   { href: "/progress", label: "Progress", icon: ChartNoAxesCombined },
   { href: "/leaderboard", label: "Leaderboard", icon: Trophy },
@@ -44,7 +44,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
   }, [auth.loading, auth.profile, pathname, router]);
 
   if (auth.loading) {
-    return <div className="login-wrap"><div className="muted">V5 portal yuklanmoqda…</div></div>;
+    return <div className="login-wrap"><div className="muted">IELTS portal yuklanmoqda…</div></div>;
   }
   if (!auth.profile) return null;
 
@@ -52,8 +52,8 @@ export function PortalShell({ children }: { children: ReactNode }) {
     <div className="shell">
       <aside className="sidebar" aria-label="Primary navigation">
         <div className="brand">
-          <span className="brandmark" aria-hidden="true">V5</span>
-          <div>V5 Student<div className="muted" style={{ fontSize: 11, fontWeight: 500 }}>Student learning and assessment portal</div></div>
+          <span className="brandmark" aria-hidden="true">IELTS</span>
+          <div>IELTS Student<div className="muted" style={{ fontSize: 11, fontWeight: 500 }}>Student learning and assessment portal</div></div>
         </div>
         <nav className="nav">
           {nav.map((item) => {
@@ -83,7 +83,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
         <div className="content">{children}</div>
       </main>
       <nav className="mobile-nav" aria-label="Mobile navigation">
-        {nav.slice(0, 8).map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}
+        {nav.map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}
       </nav>
     </div>
   );

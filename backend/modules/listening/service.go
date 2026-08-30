@@ -18,9 +18,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/assessment-platform-v5/internal/authz"
-	"github.com/example/assessment-platform-v5/internal/clientx"
-	"github.com/example/assessment-platform-v5/internal/webx"
+	"github.com/example/ielts-platform/internal/authz"
+	"github.com/example/ielts-platform/internal/clientx"
+	"github.com/example/ielts-platform/internal/webx"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -104,8 +104,8 @@ func (s *Service) listAudio(w http.ResponseWriter, r *http.Request) error {
 	if e != nil {
 		return e
 	}
-	if a.Role != "center_admin" {
-		return webx.E(403, "forbidden", "center admin required")
+	if a.Role != "center" && a.Role != "teacher" {
+		return webx.E(403, "forbidden", "center admin or teacher required")
 	}
 	rows, e := s.DB.Query(r.Context(), `SELECT id,organization_id,title,storage_key,sha256,mime_type,size_bytes,duration_ms,coalesce(level,''),max_plays,allow_seek,status,created_at FROM audio_assets WHERE organization_id=$1 ORDER BY created_at DESC`, a.OrgID)
 	if e != nil {
@@ -144,7 +144,7 @@ func (s *Service) upload(w http.ResponseWriter, r *http.Request) error {
 	if e != nil {
 		return e
 	}
-	if a.Role != "center_admin" {
+	if a.Role != "center" {
 		return webx.E(403, "forbidden", "center admin required")
 	}
 	max := s.MaxUpload
@@ -234,8 +234,8 @@ func (s *Service) listSets(w http.ResponseWriter, r *http.Request) error {
 	if e != nil {
 		return e
 	}
-	if a.Role != "center_admin" {
-		return webx.E(403, "forbidden", "center admin required")
+	if a.Role != "center" && a.Role != "teacher" {
+		return webx.E(403, "forbidden", "center admin or teacher required")
 	}
 	rows, e := s.DB.Query(r.Context(), `SELECT id,organization_id,audio_id,title,level,questions,created_at FROM listening_sets WHERE organization_id=$1 ORDER BY created_at DESC`, a.OrgID)
 	if e != nil {
@@ -302,7 +302,7 @@ func (s *Service) createSet(w http.ResponseWriter, r *http.Request) error {
 	if e != nil {
 		return e
 	}
-	if a.Role != "center_admin" {
+	if a.Role != "center" {
 		return webx.E(403, "forbidden", "center admin required")
 	}
 	var x struct {
@@ -349,8 +349,14 @@ func (s *Service) assignments(w http.ResponseWriter, r *http.Request) error {
 	if e != nil {
 		return e
 	}
-	if a.Role == "center_admin" {
-		rows, e := s.DB.Query(r.Context(), `SELECT id,organization_id,set_id,target_type,target_id,due_at,created_at FROM listening_assignments WHERE organization_id=$1 ORDER BY created_at DESC`, a.OrgID)
+	if a.Role == "center" || a.Role == "teacher" {
+		query := `SELECT id,organization_id,set_id,target_type,target_id,due_at,created_at FROM listening_assignments WHERE organization_id=$1 ORDER BY created_at DESC`
+		args := []any{a.OrgID}
+		if a.Role == "teacher" {
+			query = `SELECT id,organization_id,set_id,target_type,target_id,due_at,created_at FROM listening_assignments WHERE organization_id=$1 AND created_by=$2 ORDER BY created_at DESC`
+			args = append(args, a.UserID)
+		}
+		rows, e := s.DB.Query(r.Context(), query, args...)
 		if e != nil {
 			return e
 		}
@@ -405,7 +411,7 @@ func scanAssignment(row pgx.Row) (Assignment, error) {
 	}
 	return x, e
 }
-func (s *Service) validateAssignmentTarget(ctx context.Context, organizationID, targetType string, targetID *string) error {
+func (s *Service) validateAssignmentTarget(ctx context.Context, actor authz.Actor, targetType string, targetID *string) error {
 	if targetType == "all" {
 		return nil
 	}
@@ -419,7 +425,8 @@ func (s *Service) validateAssignmentTarget(ctx context.Context, organizationID, 
 		Valid bool `json:"valid"`
 	}
 	if err := s.Tenant.Do(ctx, "POST", "/internal/target/validate", map[string]any{
-		"organization_id": organizationID, "target_type": targetType, "target_id": *targetID,
+		"organization_id": actor.OrgID, "target_type": targetType, "target_id": *targetID,
+		"actor_role": actor.Role, "actor_user_id": actor.UserID,
 	}, &out); err != nil {
 		return fmt.Errorf("validate assignment target: %w", err)
 	}
@@ -434,8 +441,8 @@ func (s *Service) createAssignment(w http.ResponseWriter, r *http.Request) error
 	if e != nil {
 		return e
 	}
-	if a.Role != "center_admin" {
-		return webx.E(403, "forbidden", "center admin required")
+	if a.Role != "center" && a.Role != "teacher" {
+		return webx.E(403, "forbidden", "center admin or teacher required")
 	}
 	var x struct {
 		SetID      string     `json:"set_id"`
@@ -449,12 +456,15 @@ func (s *Service) createAssignment(w http.ResponseWriter, r *http.Request) error
 	if x.TargetType != "student" && x.TargetType != "group" && x.TargetType != "all" {
 		return webx.E(400, "target_type", "student, group or all required")
 	}
+	if a.Role == "teacher" && x.TargetType == "all" {
+		return webx.E(403, "target_forbidden", "teachers can assign only to their own groups or students in those groups")
+	}
 	if x.TargetType == "all" {
 		x.TargetID = nil
 	} else if x.TargetID == nil {
 		return webx.E(400, "target_id", "target id required")
 	}
-	if err := s.validateAssignmentTarget(r.Context(), a.OrgID, x.TargetType, x.TargetID); err != nil {
+	if err := s.validateAssignmentTarget(r.Context(), a, x.TargetType, x.TargetID); err != nil {
 		return err
 	}
 	if x.DueAt != nil && x.DueAt.Before(time.Now()) {
@@ -550,7 +560,7 @@ func (s *Service) start(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 func listeningQuestionUUID(setID, questionID string) string {
-	return uuid.NewSHA1(uuid.NameSpaceURL, []byte("assessment-platform-v5:listening:"+setID+":"+questionID)).String()
+	return uuid.NewSHA1(uuid.NameSpaceURL, []byte("ielts-platform:listening:"+setID+":"+questionID)).String()
 }
 
 func (s *Service) publicQuestionsWithRush(ctx context.Context, setID string, raw []byte) ([]map[string]any, error) {

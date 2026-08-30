@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/assessment-platform-v5/internal/authz"
+	"github.com/example/ielts-platform/internal/authz"
 )
 
 type Client struct {

@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/assessment-platform-v5/internal/authz"
-	"github.com/example/assessment-platform-v5/internal/clientx"
-	"github.com/example/assessment-platform-v5/internal/webx"
+	"github.com/example/ielts-platform/internal/authz"
+	"github.com/example/ielts-platform/internal/clientx"
+	"github.com/example/ielts-platform/internal/webx"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -78,12 +78,18 @@ func (s *Service) Router() http.Handler {
 	m.HandleFunc("GET /v1/students", webx.Handle(s.students))
 	m.HandleFunc("POST /v1/students", webx.Handle(s.createStudent))
 	m.HandleFunc("PATCH /v1/students/{id}", webx.Handle(s.updateStudent))
+	m.HandleFunc("GET /v1/teachers", webx.Handle(s.teachers))
+	m.HandleFunc("POST /v1/teachers", webx.Handle(s.createTeacher))
+	m.HandleFunc("PATCH /v1/teachers/{id}", webx.Handle(s.updateTeacher))
 	m.HandleFunc("GET /v1/groups", webx.Handle(s.groups))
 	m.HandleFunc("POST /v1/groups", webx.Handle(s.createGroup))
 	m.HandleFunc("DELETE /v1/groups/{id}", webx.Handle(s.archiveGroup))
 	m.HandleFunc("GET /v1/groups/{id}/students", webx.Handle(s.groupStudents))
 	m.HandleFunc("POST /v1/groups/{id}/students", webx.Handle(s.addGroupStudent))
 	m.HandleFunc("DELETE /v1/groups/{id}/students/{studentID}", webx.Handle(s.removeGroupStudent))
+	m.HandleFunc("GET /v1/groups/{id}/teachers", webx.Handle(s.groupTeachers))
+	m.HandleFunc("POST /v1/groups/{id}/teachers", webx.Handle(s.addGroupTeacher))
+	m.HandleFunc("DELETE /v1/groups/{id}/teachers/{teacherID}", webx.Handle(s.removeGroupTeacher))
 	m.HandleFunc("GET /internal/student/{id}/groups", webx.Handle(s.internalStudentGroups))
 	m.HandleFunc("POST /internal/target/validate", webx.Handle(s.internalValidateTarget))
 	m.HandleFunc("POST /internal/usage/reserve", webx.Handle(s.reserve))
@@ -117,7 +123,7 @@ func (s *Service) listCenters(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if authz.Require(a, "platform_admin") != nil {
+	if authz.Require(a, "admin") != nil {
 		return webx.E(403, "forbidden", "platform admin required")
 	}
 	rows, err := s.DB.Query(r.Context(), `SELECT id,name,slug,status,subscription_status,trial_ends_at,timezone,active_student_limit,created_at FROM organizations ORDER BY created_at DESC`)
@@ -154,7 +160,7 @@ func (s *Service) createCenter(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if authz.Require(a, "platform_admin") != nil {
+	if authz.Require(a, "admin") != nil {
 		return webx.E(403, "forbidden", "platform admin required")
 	}
 	var x CreateCenter
@@ -198,7 +204,7 @@ func (s *Service) createCenter(w http.ResponseWriter, r *http.Request) error {
 			return webx.E(400, "service", "unknown service code "+code)
 		}
 	}
-	req := map[string]any{"organization_id": orgID.String(), "role": "center_admin", "email": x.AdminEmail, "password": x.AdminPassword, "full_name": x.AdminName}
+	req := map[string]any{"organization_id": orgID.String(), "role": "center", "email": x.AdminEmail, "password": x.AdminPassword, "full_name": x.AdminName}
 	var created struct {
 		UserID string `json:"user_id"`
 	}
@@ -232,7 +238,7 @@ func (s *Service) updateCenter(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if authz.Require(a, "platform_admin") != nil {
+	if authz.Require(a, "admin") != nil {
 		return webx.E(403, "forbidden", "platform admin required")
 	}
 	id := r.PathValue("id")
@@ -312,7 +318,7 @@ func (s *Service) services(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if a.Role == "platform_admin" {
+	if a.Role == "admin" {
 		rows, err := s.DB.Query(r.Context(), `SELECT code,name,unit,category,default_monthly_limit,default_daily_limit,description FROM service_catalog WHERE enabled=true ORDER BY category,name`)
 		if err != nil {
 			return err
@@ -331,7 +337,7 @@ func (s *Service) services(w http.ResponseWriter, r *http.Request) error {
 		webx.JSON(w, 200, map[string]any{"items": items})
 		return rows.Err()
 	}
-	if a.Role != "center_admin" && a.Role != "student" {
+	if a.Role != "center" && a.Role != "teacher" && a.Role != "student" {
 		return webx.E(403, "forbidden", "unsupported role")
 	}
 	ls, err := s.limits(r.Context(), a.OrgID)
@@ -346,7 +352,7 @@ func (s *Service) centerServices(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if authz.Require(a, "platform_admin") != nil {
+	if authz.Require(a, "admin") != nil {
 		return webx.E(403, "forbidden", "platform admin required")
 	}
 	org := r.PathValue("id")
@@ -372,7 +378,7 @@ func (s *Service) updateLimit(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if authz.Require(a, "platform_admin") != nil {
+	if authz.Require(a, "admin") != nil {
 		return webx.E(403, "forbidden", "platform admin required")
 	}
 	org := r.PathValue("id")
@@ -446,14 +452,43 @@ func (s *Service) students(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if authz.Require(a, "center_admin") != nil {
-		return webx.E(403, "forbidden", "center admin required")
+	if a.Role != "center" && a.Role != "teacher" {
+		return webx.E(403, "forbidden", "center or teacher required")
 	}
 	var out struct {
 		Items []Student `json:"items"`
 	}
 	if err := s.Identity.Do(r.Context(), "GET", "/internal/students?organization_id="+a.OrgID, nil, &out); err != nil {
 		return fmt.Errorf("list center students: %w", err)
+	}
+	if a.Role == "teacher" {
+		rows, err := s.DB.Query(r.Context(), `SELECT DISTINCT gm.student_user_id
+			FROM group_teachers gt
+			JOIN group_members gm ON gm.group_id=gt.group_id AND gm.organization_id=gt.organization_id
+			JOIN groups g ON g.id=gt.group_id
+			WHERE gt.organization_id=$1 AND gt.teacher_user_id=$2 AND g.status='active'`, a.OrgID, a.UserID)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		allowed := map[string]bool{}
+		for rows.Next() {
+			var id uuid.UUID
+			if err := rows.Scan(&id); err != nil {
+				return err
+			}
+			allowed[id.String()] = true
+		}
+		if err := rows.Err(); err != nil {
+			return err
+		}
+		filtered := make([]Student, 0, len(out.Items))
+		for _, st := range out.Items {
+			if allowed[st.UserID] {
+				filtered = append(filtered, st)
+			}
+		}
+		out.Items = filtered
 	}
 	webx.JSON(w, 200, out)
 	return nil
@@ -464,7 +499,7 @@ func (s *Service) createStudent(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if authz.Require(a, "center_admin") != nil {
+	if authz.Require(a, "center") != nil {
 		return webx.E(403, "forbidden", "center admin required")
 	}
 	var x struct {
@@ -531,7 +566,7 @@ func (s *Service) updateStudent(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if authz.Require(a, "center_admin") != nil {
+	if authz.Require(a, "center") != nil {
 		return webx.E(403, "forbidden", "center admin required")
 	}
 	if _, err := uuid.Parse(r.PathValue("id")); err != nil {
@@ -572,11 +607,29 @@ func (s *Service) groups(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if a.Role != "center_admin" && a.Role != "student" {
-		return webx.E(403, "forbidden", "center or student required")
+	if a.Role != "center" && a.Role != "teacher" && a.Role != "student" {
+		return webx.E(403, "forbidden", "center, teacher or student required")
 	}
 	if a.Role == "student" {
 		rows, err := s.DB.Query(r.Context(), `SELECT g.id,g.name,g.level,g.teacher_name,g.status,(SELECT count(*) FROM group_members m WHERE m.group_id=g.id) FROM groups g JOIN group_members gm ON gm.group_id=g.id WHERE gm.organization_id=$1 AND gm.student_user_id=$2 AND g.status='active' ORDER BY g.name`, a.OrgID, a.UserID)
+		if err != nil {
+			return err
+		}
+		defer rows.Close()
+		out, err := scanGroups(rows)
+		if err != nil {
+			return err
+		}
+		webx.JSON(w, 200, map[string]any{"items": out})
+		return nil
+	}
+	if a.Role == "teacher" {
+		rows, err := s.DB.Query(r.Context(), `SELECT g.id,g.name,g.level,g.teacher_name,g.status,
+			(SELECT count(*) FROM group_members m WHERE m.group_id=g.id)
+			FROM groups g
+			JOIN group_teachers gt ON gt.group_id=g.id AND gt.organization_id=g.organization_id
+			WHERE g.organization_id=$1 AND gt.teacher_user_id=$2 AND g.status='active'
+			ORDER BY g.name`, a.OrgID, a.UserID)
 		if err != nil {
 			return err
 		}
@@ -625,13 +678,14 @@ func (s *Service) createGroup(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if authz.Require(a, "center_admin") != nil {
+	if authz.Require(a, "center") != nil {
 		return webx.E(403, "forbidden", "center admin required")
 	}
 	var x struct {
-		Name        string  `json:"name"`
-		Level       *string `json:"level"`
-		TeacherName *string `json:"teacher_name"`
+		Name           string   `json:"name"`
+		Level          *string  `json:"level"`
+		TeacherName    *string  `json:"teacher_name"`
+		TeacherUserIDs []string `json:"teacher_user_ids"`
 	}
 	if err := webx.Decode(r, &x, 64<<10); err != nil {
 		return err
@@ -653,9 +707,32 @@ func (s *Service) createGroup(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 	}
-	var id uuid.UUID
-	err = s.DB.QueryRow(r.Context(), `INSERT INTO groups(organization_id,name,level,teacher_name) VALUES($1,$2,$3,$4) RETURNING id`, a.OrgID, x.Name, x.Level, x.TeacherName).Scan(&id)
+	for _, teacherID := range x.TeacherUserIDs {
+		if err := s.validateTeacher(r.Context(), teacherID, a.OrgID); err != nil {
+			return err
+		}
+	}
+	tx, err := s.DB.Begin(r.Context())
 	if err != nil {
+		return err
+	}
+	defer tx.Rollback(r.Context())
+	var id uuid.UUID
+	err = tx.QueryRow(r.Context(), `INSERT INTO groups(organization_id,name,level,teacher_name) VALUES($1,$2,$3,$4) RETURNING id`, a.OrgID, x.Name, x.Level, x.TeacherName).Scan(&id)
+	if err != nil {
+		return err
+	}
+	seenTeachers := map[string]bool{}
+	for _, teacherID := range x.TeacherUserIDs {
+		if seenTeachers[teacherID] {
+			continue
+		}
+		seenTeachers[teacherID] = true
+		if _, err = tx.Exec(r.Context(), `INSERT INTO group_teachers(group_id,organization_id,teacher_user_id,assigned_by_user_id) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING`, id, a.OrgID, teacherID, a.UserID); err != nil {
+			return err
+		}
+	}
+	if err := tx.Commit(r.Context()); err != nil {
 		return err
 	}
 	webx.JSON(w, 201, map[string]any{"id": id.String(), "name": x.Name})
@@ -666,7 +743,7 @@ func (s *Service) archiveGroup(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if authz.Require(a, "center_admin") != nil {
+	if authz.Require(a, "center") != nil {
 		return webx.E(403, "forbidden", "center admin required")
 	}
 	ct, err := s.DB.Exec(r.Context(), `UPDATE groups SET status='archived' WHERE id=$1 AND organization_id=$2`, r.PathValue("id"), a.OrgID)
@@ -684,8 +761,17 @@ func (s *Service) groupStudents(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if authz.Require(a, "center_admin") != nil {
-		return webx.E(403, "forbidden", "center admin required")
+	if a.Role != "center" && a.Role != "teacher" {
+		return webx.E(403, "forbidden", "center or teacher required")
+	}
+	if a.Role == "teacher" {
+		ok, err := s.teacherOwnsGroup(r.Context(), a.OrgID, a.UserID, r.PathValue("id"))
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return webx.E(404, "group", "group not found")
+		}
 	}
 	rows, err := s.DB.Query(r.Context(), `SELECT m.student_user_id,m.joined_at FROM group_members m JOIN groups g ON g.id=m.group_id WHERE m.group_id=$1 AND m.organization_id=$2 AND g.organization_id=$2 ORDER BY m.joined_at`, r.PathValue("id"), a.OrgID)
 	if err != nil {
@@ -749,12 +835,165 @@ func (s *Service) validateStudent(ctx context.Context, id, org string) error {
 	}
 	return nil
 }
+
+func (s *Service) validateTeacher(ctx context.Context, id, org string) error {
+	if _, err := uuid.Parse(id); err != nil {
+		return webx.E(400, "teacher", "invalid teacher id")
+	}
+	var p struct {
+		OrganizationID *string `json:"organization_id"`
+		Role           string  `json:"role"`
+		Status         string  `json:"status"`
+	}
+	if err := s.Identity.Do(ctx, "GET", "/internal/resolve?user_id="+id, nil, &p); err != nil {
+		return fmt.Errorf("resolve teacher: %w", err)
+	}
+	if p.Role != "teacher" || p.OrganizationID == nil || *p.OrganizationID != org || p.Status != "active" {
+		return webx.E(400, "teacher", "active teacher does not belong to this center")
+	}
+	return nil
+}
+
+func (s *Service) teacherOwnsGroup(ctx context.Context, org, teacherID, groupID string) (bool, error) {
+	if _, err := uuid.Parse(groupID); err != nil {
+		return false, nil
+	}
+	var ok bool
+	err := s.DB.QueryRow(ctx, `SELECT EXISTS(
+		SELECT 1 FROM group_teachers gt
+		JOIN groups g ON g.id=gt.group_id
+		WHERE gt.group_id=$1 AND gt.organization_id=$2 AND gt.teacher_user_id=$3 AND g.status='active'
+	)`, groupID, org, teacherID).Scan(&ok)
+	return ok, err
+}
+
+func (s *Service) teacherOwnsStudent(ctx context.Context, org, teacherID, studentID string) (bool, error) {
+	if _, err := uuid.Parse(studentID); err != nil {
+		return false, nil
+	}
+	var ok bool
+	err := s.DB.QueryRow(ctx, `SELECT EXISTS(
+		SELECT 1 FROM group_teachers gt
+		JOIN group_members gm ON gm.group_id=gt.group_id AND gm.organization_id=gt.organization_id
+		JOIN groups g ON g.id=gt.group_id
+		WHERE gt.organization_id=$1 AND gt.teacher_user_id=$2 AND gm.student_user_id=$3 AND g.status='active'
+	)`, org, teacherID, studentID).Scan(&ok)
+	return ok, err
+}
+
+func (s *Service) groupTeachers(w http.ResponseWriter, r *http.Request) error {
+	a, err := s.actor(r)
+	if err != nil {
+		return err
+	}
+	if a.Role != "center" && a.Role != "teacher" {
+		return webx.E(403, "forbidden", "center or teacher required")
+	}
+	if a.Role == "teacher" {
+		ok, err := s.teacherOwnsGroup(r.Context(), a.OrgID, a.UserID, r.PathValue("id"))
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return webx.E(404, "group", "group not found")
+		}
+	}
+	rows, err := s.DB.Query(r.Context(), `SELECT teacher_user_id,assigned_at FROM group_teachers WHERE group_id=$1 AND organization_id=$2 ORDER BY assigned_at`, r.PathValue("id"), a.OrgID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	type link struct {
+		UserID     string
+		AssignedAt time.Time
+	}
+	links := []link{}
+	for rows.Next() {
+		var id uuid.UUID
+		var assigned time.Time
+		if err := rows.Scan(&id, &assigned); err != nil {
+			return err
+		}
+		links = append(links, link{UserID: id.String(), AssignedAt: assigned})
+	}
+	var teachers struct {
+		Items []Student `json:"items"`
+	}
+	if err := s.Identity.Do(r.Context(), "GET", "/internal/users?organization_id="+a.OrgID+"&role=teacher", nil, &teachers); err != nil {
+		return fmt.Errorf("resolve group teachers: %w", err)
+	}
+	byID := map[string]Student{}
+	for _, teacher := range teachers.Items {
+		byID[teacher.UserID] = teacher
+	}
+	items := make([]map[string]any, 0, len(links))
+	for _, l := range links {
+		item := map[string]any{"teacher_user_id": l.UserID, "assigned_at": l.AssignedAt}
+		if teacher, ok := byID[l.UserID]; ok {
+			item["user_id"] = teacher.UserID
+			item["full_name"] = teacher.FullName
+			item["email"] = teacher.Email
+			item["status"] = teacher.Status
+		}
+		items = append(items, item)
+	}
+	webx.JSON(w, 200, map[string]any{"items": items})
+	return rows.Err()
+}
+
+func (s *Service) addGroupTeacher(w http.ResponseWriter, r *http.Request) error {
+	a, err := s.actor(r)
+	if err != nil {
+		return err
+	}
+	if authz.Require(a, "center") != nil {
+		return webx.E(403, "forbidden", "center admin required")
+	}
+	var x struct {
+		TeacherUserID string `json:"teacher_user_id"`
+	}
+	if err := webx.Decode(r, &x, 64<<10); err != nil {
+		return err
+	}
+	if err := s.validateTeacher(r.Context(), x.TeacherUserID, a.OrgID); err != nil {
+		return err
+	}
+	var groupExists bool
+	if err := s.DB.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM groups WHERE id=$1 AND organization_id=$2 AND status='active')`, r.PathValue("id"), a.OrgID).Scan(&groupExists); err != nil {
+		return err
+	}
+	if !groupExists {
+		return webx.E(404, "group", "group not found")
+	}
+	_, err = s.DB.Exec(r.Context(), `INSERT INTO group_teachers(group_id,organization_id,teacher_user_id,assigned_by_user_id) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING`, r.PathValue("id"), a.OrgID, x.TeacherUserID, a.UserID)
+	if err != nil {
+		return err
+	}
+	webx.JSON(w, 201, map[string]any{"ok": true})
+	return nil
+}
+
+func (s *Service) removeGroupTeacher(w http.ResponseWriter, r *http.Request) error {
+	a, err := s.actor(r)
+	if err != nil {
+		return err
+	}
+	if authz.Require(a, "center") != nil {
+		return webx.E(403, "forbidden", "center admin required")
+	}
+	_, err = s.DB.Exec(r.Context(), `DELETE FROM group_teachers WHERE group_id=$1 AND organization_id=$2 AND teacher_user_id=$3`, r.PathValue("id"), a.OrgID, r.PathValue("teacherID"))
+	if err != nil {
+		return err
+	}
+	w.WriteHeader(http.StatusNoContent)
+	return nil
+}
 func (s *Service) addGroupStudent(w http.ResponseWriter, r *http.Request) error {
 	a, err := s.actor(r)
 	if err != nil {
 		return err
 	}
-	if authz.Require(a, "center_admin") != nil {
+	if authz.Require(a, "center") != nil {
 		return webx.E(403, "forbidden", "center admin required")
 	}
 	var x struct {
@@ -785,7 +1024,7 @@ func (s *Service) removeGroupStudent(w http.ResponseWriter, r *http.Request) err
 	if err != nil {
 		return err
 	}
-	if authz.Require(a, "center_admin") != nil {
+	if authz.Require(a, "center") != nil {
 		return webx.E(403, "forbidden", "center admin required")
 	}
 	_, err = s.DB.Exec(r.Context(), `DELETE FROM group_members WHERE group_id=$1 AND organization_id=$2 AND student_user_id=$3`, r.PathValue("id"), a.OrgID, r.PathValue("studentID"))
@@ -796,19 +1035,29 @@ func (s *Service) removeGroupStudent(w http.ResponseWriter, r *http.Request) err
 	return nil
 }
 func (s *Service) internalValidateTarget(w http.ResponseWriter, r *http.Request) error {
-	if err := s.serviceAuth(r, "assessment", "sat", "listening"); err != nil {
+	if err := s.serviceAuth(r, "assessment", "sat", "listening", "vocabulary"); err != nil {
 		return err
 	}
 	var x struct {
 		OrganizationID string `json:"organization_id"`
 		TargetType     string `json:"target_type"`
 		TargetID       string `json:"target_id"`
+		ActorRole      string `json:"actor_role"`
+		ActorUserID    string `json:"actor_user_id"`
 	}
 	if err := webx.Decode(r, &x, 64<<10); err != nil {
 		return err
 	}
 	if _, err := uuid.Parse(x.OrganizationID); err != nil {
 		return webx.E(400, "organization_id", "invalid organization id")
+	}
+	if x.ActorRole == "teacher" {
+		if _, err := uuid.Parse(x.ActorUserID); err != nil {
+			return webx.E(400, "actor_user_id", "invalid teacher actor id")
+		}
+		if x.TargetType == "all" {
+			return webx.E(403, "target_forbidden", "teachers can assign services only to their groups or students in those groups")
+		}
 	}
 	if x.TargetType == "all" {
 		webx.JSON(w, 200, map[string]any{"valid": true})
@@ -822,14 +1071,29 @@ func (s *Service) internalValidateTarget(w http.ResponseWriter, r *http.Request)
 	}
 	if x.TargetType == "group" {
 		var ok bool
-		if err := s.DB.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM groups WHERE id=$1 AND organization_id=$2 AND status='active')`, x.TargetID, x.OrganizationID).Scan(&ok); err != nil {
+		if x.ActorRole == "teacher" {
+			owned, err := s.teacherOwnsGroup(r.Context(), x.OrganizationID, x.ActorUserID, x.TargetID)
+			if err != nil {
+				return err
+			}
+			ok = owned
+		} else if err := s.DB.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM groups WHERE id=$1 AND organization_id=$2 AND status='active')`, x.TargetID, x.OrganizationID).Scan(&ok); err != nil {
 			return err
 		}
 		if !ok {
-			return webx.E(400, "target_id", "active group does not belong to this center")
+			return webx.E(400, "target_id", "group is not available to this actor")
 		}
 		webx.JSON(w, 200, map[string]any{"valid": true})
 		return nil
+	}
+	if x.ActorRole == "teacher" {
+		ok, err := s.teacherOwnsStudent(r.Context(), x.OrganizationID, x.ActorUserID, x.TargetID)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return webx.E(400, "target_id", "student is not in one of this teacher's groups")
+		}
 	}
 	if err := s.validateStudent(r.Context(), x.TargetID, x.OrganizationID); err != nil {
 		return err
@@ -959,5 +1223,85 @@ func (s *Service) internalOrganization(w http.ResponseWriter, r *http.Request) e
 		return err
 	}
 	webx.JSON(w, 200, c)
+	return nil
+}
+
+func (s *Service) teachers(w http.ResponseWriter, r *http.Request) error {
+	a, err := s.actor(r)
+	if err != nil {
+		return err
+	}
+	if authz.Require(a, "center") != nil {
+		return webx.E(403, "forbidden", "center required")
+	}
+	var out struct {
+		Items []Student `json:"items"`
+	}
+	if err := s.Identity.Do(r.Context(), "GET", "/internal/users?organization_id="+a.OrgID+"&role=teacher", nil, &out); err != nil {
+		return fmt.Errorf("list center teachers: %w", err)
+	}
+	webx.JSON(w, 200, out)
+	return nil
+}
+
+func (s *Service) createTeacher(w http.ResponseWriter, r *http.Request) error {
+	a, err := s.actor(r)
+	if err != nil {
+		return err
+	}
+	if authz.Require(a, "center") != nil {
+		return webx.E(403, "forbidden", "center required")
+	}
+	var x struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+		FullName string `json:"full_name"`
+	}
+	if err := webx.Decode(r, &x, 1<<20); err != nil {
+		return err
+	}
+	req := map[string]any{"organization_id": a.OrgID, "role": "teacher", "email": x.Email, "password": x.Password, "full_name": x.FullName}
+	var created Student
+	if err := s.Identity.Do(r.Context(), "POST", "/internal/users", req, &created); err != nil {
+		return fmt.Errorf("create teacher account: %w", err)
+	}
+	webx.JSON(w, 201, created)
+	return nil
+}
+
+func (s *Service) updateTeacher(w http.ResponseWriter, r *http.Request) error {
+	a, err := s.actor(r)
+	if err != nil {
+		return err
+	}
+	if authz.Require(a, "center") != nil {
+		return webx.E(403, "forbidden", "center required")
+	}
+	if _, err := uuid.Parse(r.PathValue("id")); err != nil {
+		return webx.E(400, "teacher", "invalid teacher id")
+	}
+	var x struct {
+		Status      *string `json:"status"`
+		FullName    *string `json:"full_name"`
+		NewPassword *string `json:"new_password"`
+	}
+	if err := webx.Decode(r, &x, 64<<10); err != nil {
+		return err
+	}
+	payload := map[string]any{"organization_id": a.OrgID, "expected_role": "teacher"}
+	if x.Status != nil {
+		payload["status"] = *x.Status
+	}
+	if x.FullName != nil {
+		payload["full_name"] = *x.FullName
+	}
+	if x.NewPassword != nil {
+		payload["new_password"] = *x.NewPassword
+	}
+	var updated Student
+	if err := s.Identity.Do(r.Context(), "PATCH", "/internal/managed-users/"+r.PathValue("id"), payload, &updated); err != nil {
+		return fmt.Errorf("update teacher account: %w", err)
+	}
+	webx.JSON(w, 200, updated)
 	return nil
 }

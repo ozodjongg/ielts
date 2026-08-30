@@ -13,9 +13,9 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/example/assessment-platform-v5/internal/authz"
-	"github.com/example/assessment-platform-v5/internal/clientx"
-	"github.com/example/assessment-platform-v5/internal/webx"
+	"github.com/example/ielts-platform/internal/authz"
+	"github.com/example/ielts-platform/internal/clientx"
+	"github.com/example/ielts-platform/internal/webx"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -91,10 +91,16 @@ func (s *Service) Router() http.Handler {
 	m.HandleFunc("GET /v1/daily", webx.Handle(s.daily))
 	m.HandleFunc("POST /v1/daily/{sessionID}/grade", webx.Handle(s.grade))
 	m.HandleFunc("GET /v1/stats", webx.Handle(s.stats))
-	m.HandleFunc("POST /v1/center/words/check", webx.Handle(s.centerCheckWords))
-	m.HandleFunc("POST /v1/center/words", webx.Handle(s.centerAddWord))
-	m.HandleFunc("POST /v1/center/words/batch", webx.Handle(s.centerAddWordsBatch))
-	m.HandleFunc("GET /v1/center/contributions", webx.Handle(s.centerContributions))
+	m.HandleFunc("POST /v1/teacher/words/check", webx.Handle(s.centerCheckWords))
+	m.HandleFunc("POST /v1/teacher/words", webx.Handle(s.centerAddWord))
+	m.HandleFunc("POST /v1/teacher/words/batch", webx.Handle(s.centerAddWordsBatch))
+	m.HandleFunc("GET /v1/teacher/contributions", webx.Handle(s.centerContributions))
+	m.HandleFunc("POST /v1/teacher/students/{studentID}/words", webx.Handle(s.teacherAssignWords))
+	m.HandleFunc("GET /v1/teacher/students/{studentID}/words", webx.Handle(s.teacherStudentWords))
+	m.HandleFunc("POST /v1/teacher/homework", webx.Handle(s.teacherCreateHomework))
+	m.HandleFunc("GET /v1/teacher/homework", webx.Handle(s.teacherHomework))
+	m.HandleFunc("GET /v1/assigned", webx.Handle(s.studentAssigned))
+	m.HandleFunc("POST /v1/assigned/homework/{id}/complete", webx.Handle(s.studentCompleteHomework))
 	m.HandleFunc("GET /internal/corpus/stats", webx.Handle(s.internalStats))
 	return webx.Security(m)
 }
@@ -133,7 +139,7 @@ func (s *Service) search(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if a.Role != "student" && a.Role != "center_admin" && a.Role != "platform_admin" {
+	if a.Role != "student" && a.Role != "center" && a.Role != "teacher" && a.Role != "admin" {
 		return webx.E(403, "forbidden", "invalid role")
 	}
 	q := normalizeEnglish(r.URL.Query().Get("q"))
@@ -255,13 +261,6 @@ type centerWordResult struct {
 	Error   string  `json:"error,omitempty"`
 }
 
-func requireCenterActor(a authz.Actor) error {
-	if authz.Require(a, "center_admin") != nil || strings.TrimSpace(a.OrgID) == "" {
-		return webx.E(403, "forbidden", "learning-center admin required")
-	}
-	return nil
-}
-
 func validCenterPOS(value string) bool {
 	switch value {
 	case "", "noun", "verb", "adjective", "adverb", "pronoun", "determiner", "preposition", "conjunction", "interjection", "numeral", "modal", "phrase", "phrasal_verb":
@@ -365,7 +364,7 @@ func (s *Service) centerCheckWords(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	if err := requireCenterActor(a); err != nil {
+	if err := requireTeacherActor(a); err != nil {
 		return err
 	}
 	var input struct {
@@ -438,17 +437,17 @@ func (s *Service) insertCenterWord(ctx context.Context, a authz.Actor, raw cente
 	}
 	sourceRef := in.SourceRef
 	if sourceRef == "" {
-		sourceRef = "center:" + a.OrgID + ":user:" + a.UserID
+		sourceRef = "teacher:" + a.OrgID + ":user:" + a.UserID
 	}
 	var idx int64
 	err = tx.QueryRow(ctx, `
 		INSERT INTO lexemes(english,normalized_english,uzbek,part_of_speech,cefr,level_source,source_name,source_license,source_ref,active)
-		VALUES($1,$2,$3::jsonb,nullif($4,''),$5,'center_admin','learning-center-contribution','Center-provided content; verify redistribution rights',$6,true)
+		VALUES($1,$2,$3::jsonb,nullif($4,''),$5,'teacher','teacher-contribution','Teacher-provided educational content; verify redistribution rights',$6,true)
 		RETURNING lemma_index`, in.English, in.English, string(uzJSON), in.POS, in.CEFR, sourceRef).Scan(&idx)
 	if err != nil {
 		return centerWordResult{}, err
 	}
-	if _, err := tx.Exec(ctx, `INSERT INTO center_contributions(organization_id,user_id,lexeme_index,english,normalized_english) VALUES($1,$2,$3,$4,$5) ON CONFLICT(organization_id,lexeme_index) DO NOTHING`, a.OrgID, a.UserID, idx, in.English, in.English); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO teacher_contributions(organization_id,teacher_user_id,lexeme_index,english,normalized_english) VALUES($1,$2,$3,$4,$5) ON CONFLICT(organization_id,lexeme_index) DO NOTHING`, a.OrgID, a.UserID, idx, in.English, in.English); err != nil {
 		return centerWordResult{}, err
 	}
 	item, err := s.lookupLexemeByNormalized(ctx, tx.QueryRow(ctx, `SELECT lemma_index,english,uzbek,part_of_speech,cefr,level_source,frequency_rank,synonym_group_id,source_name,source_license FROM lexemes WHERE lemma_index=$1`, idx))
@@ -466,7 +465,7 @@ func (s *Service) centerAddWord(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := requireCenterActor(a); err != nil {
+	if err := requireTeacherActor(a); err != nil {
 		return err
 	}
 	var input centerWordInput
@@ -490,7 +489,7 @@ func (s *Service) centerAddWordsBatch(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return err
 	}
-	if err := requireCenterActor(a); err != nil {
+	if err := requireTeacherActor(a); err != nil {
 		return err
 	}
 	var input struct {
@@ -530,7 +529,7 @@ func (s *Service) centerContributions(w http.ResponseWriter, r *http.Request) er
 	if err != nil {
 		return err
 	}
-	if err := requireCenterActor(a); err != nil {
+	if err := requireTeacherActor(a); err != nil {
 		return err
 	}
 	limit := 100
@@ -540,7 +539,7 @@ func (s *Service) centerContributions(w http.ResponseWriter, r *http.Request) er
 	rows, err := s.DB.Query(r.Context(), `
 		SELECT c.created_at,l.lemma_index,l.english,l.uzbek,l.part_of_speech,l.cefr,l.level_source,
 		       l.frequency_rank,l.synonym_group_id,l.source_name,l.source_license
-		FROM center_contributions c
+		FROM teacher_contributions c
 		JOIN lexemes l ON l.lemma_index=c.lexeme_index
 		WHERE c.organization_id=$1
 		ORDER BY c.created_at DESC
@@ -1049,7 +1048,7 @@ func (s *Service) daily(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 func vocabularyQuestionUUID(index int64) string {
-	return uuid.NewSHA1(uuid.NameSpaceURL, []byte(fmt.Sprintf("assessment-platform-v5:vocabulary:%d", index))).String()
+	return uuid.NewSHA1(uuid.NameSpaceURL, []byte(fmt.Sprintf("ielts-platform:vocabulary:%d", index))).String()
 }
 
 func (s *Service) grade(w http.ResponseWriter, r *http.Request) error {

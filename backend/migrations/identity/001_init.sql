@@ -2,7 +2,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE TABLE IF NOT EXISTS profiles (
   user_id uuid PRIMARY KEY,
   organization_id uuid,
-  role text NOT NULL CHECK (role IN ('platform_admin','center_admin','student')),
+  role text NOT NULL CHECK (role IN ('admin','center','teacher','student')),
   email text NOT NULL,
   full_name text NOT NULL,
   status text NOT NULL DEFAULT 'active' CHECK (status IN ('active','suspended','archived')),

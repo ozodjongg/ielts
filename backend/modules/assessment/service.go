@@ -12,10 +12,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/assessment-platform-v5/internal/authz"
-	"github.com/example/assessment-platform-v5/internal/bank"
-	"github.com/example/assessment-platform-v5/internal/clientx"
-	"github.com/example/assessment-platform-v5/internal/webx"
+	"github.com/example/ielts-platform/internal/authz"
+	"github.com/example/ielts-platform/internal/bank"
+	"github.com/example/ielts-platform/internal/clientx"
+	"github.com/example/ielts-platform/internal/webx"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -77,7 +77,7 @@ type Attempt struct {
 	FinishedAt     *time.Time `json:"finished_at,omitempty"`
 }
 
-var englishServices = map[string]bool{"placement": true, "vocabulary_test": true, "level_upgrade": true, "progress": true, "grammar": true, "ielts_readiness": true, "weakness": true, "speaking": true, "writing": true, "mock": true, "final_exit": true}
+var englishServices = map[string]bool{"placement": true, "level_upgrade": true, "progress": true, "grammar": true, "ielts_readiness": true, "weakness": true, "speaking": true, "writing": true, "mock": true, "final_exit": true}
 
 func (s *Service) Router() http.Handler {
 	m := http.NewServeMux()
@@ -113,10 +113,10 @@ func (s *Service) catalog(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if a.Role != "platform_admin" && a.Role != "center_admin" && a.Role != "student" {
+	if a.Role != "admin" && a.Role != "center" && a.Role != "teacher" && a.Role != "student" {
 		return webx.E(403, "forbidden", "invalid role")
 	}
-	items := []map[string]any{{"code": "placement", "name": "Level Placement Test", "default_questions": 80, "mode": "auto"}, {"code": "vocabulary_test", "name": "Vocabulary Assessment", "default_questions": 40, "mode": "auto"}, {"code": "level_upgrade", "name": "Level Upgrade Test", "default_questions": 40, "mode": "auto"}, {"code": "progress", "name": "Progress Test", "default_questions": 30, "mode": "auto"}, {"code": "grammar", "name": "Grammar Diagnostic", "default_questions": 40, "mode": "auto"}, {"code": "ielts_readiness", "name": "IELTS Readiness", "default_questions": 40, "mode": "auto"}, {"code": "weakness", "name": "Weakness Diagnostic", "default_questions": 30, "mode": "adaptive"}, {"code": "speaking", "name": "Speaking Assessment", "default_questions": 3, "mode": "manual"}, {"code": "writing", "name": "Writing Assessment", "default_questions": 2, "mode": "manual"}, {"code": "mock", "name": "IELTS-style Mock", "default_questions": 60, "mode": "hybrid"}, {"code": "final_exit", "name": "Final / Exit Assessment", "default_questions": 60, "mode": "auto"}}
+	items := []map[string]any{{"code": "placement", "name": "Level Placement Test", "default_questions": 80, "mode": "auto"}, {"code": "level_upgrade", "name": "Level Upgrade Test", "default_questions": 40, "mode": "auto"}, {"code": "progress", "name": "Progress Test", "default_questions": 30, "mode": "auto"}, {"code": "grammar", "name": "Grammar Diagnostic", "default_questions": 40, "mode": "auto"}, {"code": "ielts_readiness", "name": "IELTS Readiness", "default_questions": 40, "mode": "auto"}, {"code": "weakness", "name": "Weakness Diagnostic", "default_questions": 30, "mode": "adaptive"}, {"code": "speaking", "name": "Speaking Assessment", "default_questions": 3, "mode": "manual"}, {"code": "writing", "name": "Writing Assessment", "default_questions": 2, "mode": "manual"}, {"code": "mock", "name": "IELTS-style Mock", "default_questions": 60, "mode": "hybrid"}, {"code": "final_exit", "name": "Final / Exit Assessment", "default_questions": 60, "mode": "auto"}}
 	webx.JSON(w, 200, map[string]any{"items": items})
 	return nil
 }
@@ -138,7 +138,7 @@ func defaultCount(code string) int {
 	switch code {
 	case "placement":
 		return 80
-	case "vocabulary_test", "level_upgrade", "grammar", "ielts_readiness":
+	case "level_upgrade", "grammar", "ielts_readiness":
 		return 40
 	case "progress", "weakness":
 		return 30
@@ -167,8 +167,14 @@ func (s *Service) listAssignments(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	if a.Role == "center_admin" {
-		rows, err := s.DB.Query(r.Context(), `SELECT id,organization_id,service_code,title,target_type,target_id,from_level,to_level,question_count,opens_at,due_at,status,created_by,created_at FROM assignments WHERE organization_id=$1 ORDER BY created_at DESC LIMIT 500`, a.OrgID)
+	if a.Role == "center" || a.Role == "teacher" {
+		query := `SELECT id,organization_id,service_code,title,target_type,target_id,from_level,to_level,question_count,opens_at,due_at,status,created_by,created_at FROM assignments WHERE organization_id=$1 ORDER BY created_at DESC LIMIT 500`
+		args := []any{a.OrgID}
+		if a.Role == "teacher" {
+			query = `SELECT id,organization_id,service_code,title,target_type,target_id,from_level,to_level,question_count,opens_at,due_at,status,created_by,created_at FROM assignments WHERE organization_id=$1 AND created_by=$2 ORDER BY created_at DESC LIMIT 500`
+			args = append(args, a.UserID)
+		}
+		rows, err := s.DB.Query(r.Context(), query, args...)
 		if err != nil {
 			return err
 		}
@@ -214,7 +220,7 @@ func (s *Service) listAssignments(w http.ResponseWriter, r *http.Request) error 
 	webx.JSON(w, 200, map[string]any{"items": items})
 	return rows.Err()
 }
-func (s *Service) validateAssignmentTarget(ctx context.Context, organizationID, targetType string, targetID *string) error {
+func (s *Service) validateAssignmentTarget(ctx context.Context, actor authz.Actor, targetType string, targetID *string) error {
 	if targetType == "all" {
 		return nil
 	}
@@ -228,7 +234,8 @@ func (s *Service) validateAssignmentTarget(ctx context.Context, organizationID, 
 		Valid bool `json:"valid"`
 	}
 	if err := s.Tenant.Do(ctx, "POST", "/internal/target/validate", map[string]any{
-		"organization_id": organizationID, "target_type": targetType, "target_id": *targetID,
+		"organization_id": actor.OrgID, "target_type": targetType, "target_id": *targetID,
+		"actor_role": actor.Role, "actor_user_id": actor.UserID,
 	}, &out); err != nil {
 		return fmt.Errorf("validate assignment target: %w", err)
 	}
@@ -243,8 +250,8 @@ func (s *Service) createAssignment(w http.ResponseWriter, r *http.Request) error
 	if err != nil {
 		return err
 	}
-	if authz.Require(a, "center_admin") != nil {
-		return webx.E(403, "forbidden", "center admin required")
+	if a.Role != "center" && a.Role != "teacher" {
+		return webx.E(403, "forbidden", "center admin or teacher required")
 	}
 	var x struct {
 		ServiceCode   string     `json:"service_code"`
@@ -265,12 +272,15 @@ func (s *Service) createAssignment(w http.ResponseWriter, r *http.Request) error
 	if x.TargetType != "student" && x.TargetType != "group" && x.TargetType != "all" {
 		return webx.E(400, "target_type", "target must be student, group, or all")
 	}
+	if a.Role == "teacher" && x.TargetType == "all" {
+		return webx.E(403, "target_forbidden", "teachers can assign only to their own groups or students in those groups")
+	}
 	if x.TargetType == "all" {
 		x.TargetID = nil
 	} else if x.TargetID == nil {
 		return webx.E(400, "target_id", "target id required")
 	}
-	if err := s.validateAssignmentTarget(r.Context(), a.OrgID, x.TargetType, x.TargetID); err != nil {
+	if err := s.validateAssignmentTarget(r.Context(), a, x.TargetType, x.TargetID); err != nil {
 		return err
 	}
 	if x.FromLevel != nil && !validLevel(*x.FromLevel) {
@@ -321,10 +331,16 @@ func (s *Service) closeAssignment(w http.ResponseWriter, r *http.Request) error 
 	if err != nil {
 		return err
 	}
-	if authz.Require(a, "center_admin") != nil {
-		return webx.E(403, "forbidden", "center admin required")
+	if a.Role != "center" && a.Role != "teacher" {
+		return webx.E(403, "forbidden", "center admin or teacher required")
 	}
-	ct, err := s.DB.Exec(r.Context(), `UPDATE assignments SET status='closed' WHERE id=$1 AND organization_id=$2`, r.PathValue("id"), a.OrgID)
+	query := `UPDATE assignments SET status='closed' WHERE id=$1 AND organization_id=$2`
+	args := []any{r.PathValue("id"), a.OrgID}
+	if a.Role == "teacher" {
+		query += ` AND created_by=$3`
+		args = append(args, a.UserID)
+	}
+	ct, err := s.DB.Exec(r.Context(), query, args...)
 	if err != nil {
 		return err
 	}
@@ -429,9 +445,6 @@ func (s *Service) buildQuestions(ctx context.Context, code, current string, from
 			return nil, fmt.Errorf("question bank cannot build placement plan: got %d of %d", len(out), count)
 		}
 		return out, nil
-	case "vocabulary_test":
-		levels = []string{"A1", "A2", "B1", "B2", "C1"}
-		cats = []string{"Vocabulary", "Use of English"}
 	case "grammar":
 		levels = []string{"A1", "A2", "B1", "B2", "C1"}
 		cats = []string{"Grammar", "Advanced Grammar", "Use of English"}
@@ -734,7 +747,7 @@ func (s *Service) ownership(a authz.Actor, x Attempt) error {
 	if a.Role == "student" && x.StudentUserID != a.UserID {
 		return webx.E(404, "attempt", "attempt not found")
 	}
-	if a.Role != "student" && a.Role != "center_admin" {
+	if a.Role != "student" && a.Role != "center" {
 		return webx.E(403, "forbidden", "invalid role")
 	}
 	return nil
@@ -754,7 +767,7 @@ func (s *Service) current(w http.ResponseWriter, r *http.Request) error {
 	if err = s.ownership(a, x); err != nil {
 		return err
 	}
-	if a.Role == "center_admin" {
+	if a.Role == "center" {
 		webx.JSON(w, 200, x)
 		return nil
 	}
@@ -1111,7 +1124,7 @@ func (s *Service) history(w http.ResponseWriter, r *http.Request) error {
 	var student string
 	if a.Role == "student" {
 		student = a.UserID
-	} else if a.Role == "center_admin" {
+	} else if a.Role == "center" {
 		student = r.URL.Query().Get("student_user_id")
 		if student == "" {
 			return webx.E(400, "student", "student_user_id required")
@@ -1148,7 +1161,7 @@ func (s *Service) progress(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	student := a.UserID
-	if a.Role == "center_admin" {
+	if a.Role == "center" {
 		student = r.URL.Query().Get("student_user_id")
 	} else if a.Role != "student" {
 		return webx.E(403, "forbidden", "invalid role")

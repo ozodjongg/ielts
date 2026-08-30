@@ -5,8 +5,8 @@ import { ThemeProvider, ThemeToaster } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
   title: { default: "IELTS Learning Center", template: "%s · IELTS Learning Center" },
-  description: "Secure learning-center administration for Assessment Platform IELTS.",
-  applicationName: "Assessment Platform IELTS",
+  description: "Learning-center management for the IELTS platform.",
+  applicationName: "IELTS Platform",
   category: "education",
   formatDetection: { email: false, address: false, telephone: false },
   robots: {
@@ -29,7 +29,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="uz" suppressHydrationWarning>
       <body className="portal-center">
         <ThemeProvider>
-          <AuthProvider portal="center" expectedRole="center_admin">{children}</AuthProvider>
+          <AuthProvider portal="center" expectedRole="center">{children}</AuthProvider>
           <ThemeToaster />
         </ThemeProvider>
       </body>

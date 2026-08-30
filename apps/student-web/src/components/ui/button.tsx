@@ -23,7 +23,7 @@ export function Button({ className = "", variant, size = "default", type = "butt
   const clean = className.replace(/(^|\s)(primary|accent|danger)(?=\s|$)/g, " ").trim();
   const resolved = variant ?? (legacyDanger ? "destructive" : legacyPrimary ? "default" : "outline");
   const variants: Record<ButtonVariant, string> = {
-    default: "border-[var(--foreground)] bg-[var(--foreground)] text-[var(--background)] hover:opacity-85",
+    default: "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-foreground)] hover:opacity-85",
     outline: "border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--muted-background)]",
     ghost: "border-transparent bg-transparent text-[var(--foreground)] hover:bg-[var(--muted-background)]",
     destructive: "border-[var(--foreground)] bg-[var(--card)] text-[var(--foreground)] hover:bg-[var(--muted-background)]",

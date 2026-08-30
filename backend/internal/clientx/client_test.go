@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/example/assessment-platform-v5/internal/authz"
+	"github.com/example/ielts-platform/internal/authz"
 )
 
 func TestLocalClientPreservesServiceAuthentication(t *testing.T) {

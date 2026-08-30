@@ -1,4 +1,4 @@
-# Assessment Platform V5 — 100K Vocabulary Data
+# IELTS Platform — 100K Vocabulary Data
 
 Files:
 - `vocabulary_100k.csv` — exactly 100,000 importer-compatible entries
@@ -8,7 +8,7 @@ Files:
 
 ## Import
 
-Use your existing V5 importer:
+Use your existing IELTS importer:
 
 ```bash
 ./.local-run/bin/vocab-import.exe \
@@ -47,5 +47,5 @@ CEFR:
 ## CEFR warning
 
 The CEFR labels are **heuristic**. They are based on English corpus frequency, rarity, token
-length and expression complexity. They are intended to make the V5 daily-learning pipeline
+length and expression complexity. They are intended to make the IELTS daily-learning pipeline
 usable across A1–C2 immediately; they should not be presented as Cambridge/CEFR-certified labels.

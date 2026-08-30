@@ -1,4 +1,4 @@
-# SAT Math V5 bank
+# SAT Math IELTS bank
 
 8,000 original SAT-style English-language math questions, generated as 80 topics × 100 equivalent variants.
 

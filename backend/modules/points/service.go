@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/example/assessment-platform-v5/internal/authz"
-	"github.com/example/assessment-platform-v5/internal/webx"
+	"github.com/example/ielts-platform/internal/authz"
+	"github.com/example/ielts-platform/internal/webx"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -191,7 +191,7 @@ func (s *Service) leaderboard(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if a.Role != "center_admin" && a.Role != "student" {
+	if a.Role != "center" && a.Role != "student" {
 		return webx.E(403, "forbidden", "center membership required")
 	}
 	rows, err := s.DB.Query(r.Context(), `SELECT student_user_id,coalesce(sum(awarded_points),0) pts,max(created_at) last_at FROM point_ledger WHERE organization_id=$1 GROUP BY student_user_id ORDER BY pts DESC,last_at DESC LIMIT 50`, a.OrgID)

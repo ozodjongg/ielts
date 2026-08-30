@@ -1,8 +1,8 @@
 package analytics
 
 import (
-	"github.com/example/assessment-platform-v5/internal/authz"
-	"github.com/example/assessment-platform-v5/internal/webx"
+	"github.com/example/ielts-platform/internal/authz"
+	"github.com/example/ielts-platform/internal/webx"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"net/http"
@@ -73,7 +73,7 @@ func (s *Service) overview(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	switch a.Role {
-	case "platform_admin":
+	case "admin":
 		var centers, events, students int64
 		_ = s.DB.QueryRow(r.Context(), `SELECT count(DISTINCT organization_id),count(*),count(DISTINCT student_user_id) FROM events WHERE occurred_at>=date_trunc('month',now())`).Scan(&centers, &events, &students)
 		rows, err := s.DB.Query(r.Context(), `SELECT coalesce(service_code,'system'),count(*) FROM events WHERE occurred_at>=date_trunc('month',now()) GROUP BY 1 ORDER BY 2 DESC`)
@@ -92,7 +92,7 @@ func (s *Service) overview(w http.ResponseWriter, r *http.Request) error {
 		}
 		webx.JSON(w, 200, map[string]any{"active_centers": centers, "events_this_month": events, "active_students": students, "service_activity": by})
 		return rows.Err()
-	case "center_admin":
+	case "center":
 		var attempts, completions, students int64
 		_ = s.DB.QueryRow(r.Context(), `SELECT count(*) FILTER(WHERE event_type like '%.started'),count(*) FILTER(WHERE event_type like '%.completed'),count(DISTINCT student_user_id) FROM events WHERE organization_id=$1 AND occurred_at>=date_trunc('month',now())`, a.OrgID).Scan(&attempts, &completions, &students)
 		webx.JSON(w, 200, map[string]any{"attempts_this_month": attempts, "completions_this_month": completions, "active_students": students})
@@ -127,13 +127,13 @@ func (s *Service) activity(w http.ResponseWriter, r *http.Request) error {
 	}
 	q := `SELECT event_id,organization_id,student_user_id,event_type,service_code,occurred_at,payload FROM events`
 	args := []any{}
-	if a.Role == "center_admin" {
+	if a.Role == "center" {
 		q += ` WHERE organization_id=$1`
 		args = append(args, a.OrgID)
 	} else if a.Role == "student" {
 		q += ` WHERE organization_id=$1 AND student_user_id=$2`
 		args = append(args, a.OrgID, a.UserID)
-	} else if a.Role != "platform_admin" {
+	} else if a.Role != "admin" {
 		return webx.E(403, "forbidden", "invalid role")
 	}
 	q += ` ORDER BY occurred_at DESC LIMIT 100`

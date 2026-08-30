@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/assessment-platform-v5/internal/dbx"
-	"github.com/example/assessment-platform-v5/internal/passwordhash"
+	"github.com/example/ielts-platform/internal/dbx"
+	"github.com/example/ielts-platform/internal/passwordhash"
 )
 
 func env(name string) string { return strings.TrimSpace(os.Getenv(name)) }

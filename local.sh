@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Assessment Platform V5 — Windows native local launcher
+# IELTS Platform — Windows native local launcher
 # Ishlatish: Git Bash ichida, shu faylni loyiha root papkasiga qo'ying.
 # Talablar: Go 1.23+, Node.js 20.9+, npm, PostgreSQL (psql), Git Bash.
-# Docker yoki tashqi auth SDK kerak emas.
+# Docker yoki tashqi auth SDK kerak emas. Rollar: admin, center, teacher, student.
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
 cd "$SCRIPT_DIR"
@@ -23,16 +23,33 @@ mkdir -p "$BIN_DIR" "$LOG_DIR" "$PID_DIR"
 DB_HOST="${LOCAL_DB_HOST:-127.0.0.1}"
 DB_PORT="${LOCAL_DB_PORT:-5432}"
 DB_USER="${LOCAL_DB_USER:-postgres}"
-DB_NAME="${LOCAL_DB_NAME:-assessment_v5}"
+DB_NAME="${LOCAL_DB_NAME:-ielts_platform}"
 
 export BACKEND_ADDR="${BACKEND_ADDR:-:8080}"
 export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-http://localhost:8080}"
 export ADMIN_ORIGINS="${ADMIN_ORIGINS:-http://localhost:3001}"
 export CENTER_ORIGINS="${CENTER_ORIGINS:-http://localhost:3002}"
 export STUDENT_ORIGINS="${STUDENT_ORIGINS:-http://localhost:3003}"
+# Agar kelajak/current build'da apps/teacher-web mavjud bo'lsa, u 3004 da ishlaydi.
+# Aks holda teacher center-web (3002) orqali kiradi.
+if [[ -d "$SCRIPT_DIR/apps/teacher-web" ]]; then
+  export TEACHER_ORIGINS="${TEACHER_ORIGINS:-http://localhost:3004}"
+else
+  export TEACHER_ORIGINS="${TEACHER_ORIGINS:-$CENTER_ORIGINS}"
+fi
 export AUTO_MIGRATE="${AUTO_MIGRATE:-true}"
-export REQUIRE_ADMIN_AAL2="${REQUIRE_ADMIN_AAL2:-false}"
-export REQUIRE_CENTER_AAL2="${REQUIRE_CENTER_AAL2:-false}"
+export REQUIRE_ADMIN_AAL2="${REQUIRE_ADMIN_AAL2:-true}"
+export REQUIRE_CENTER_AAL2="${REQUIRE_CENTER_AAL2:-true}"
+export REQUIRE_TEACHER_AAL2="${REQUIRE_TEACHER_AAL2:-true}"
+
+# TOTP/MFA faqat admin, center va teacher uchun. Ushbu privileged rollarning
+# barcha mutating/sensitive amallari localda ham AAL2 talab qiladi; student MFA ishlatmaydi.
+export AUTH_TOTP_ISSUER="${AUTH_TOTP_ISSUER:-IELTS}"
+export AUTH_TOTP_DIGITS="${AUTH_TOTP_DIGITS:-6}"
+export AUTH_TOTP_PERIOD_SECONDS="${AUTH_TOTP_PERIOD_SECONDS:-30}"
+export AUTH_TOTP_WINDOW="${AUTH_TOTP_WINDOW:-1}"
+export AUTH_TOTP_SETUP_TTL_MINUTES="${AUTH_TOTP_SETUP_TTL_MINUTES:-10}"
+export AUTH_MFA_RECOVERY_CODES="${AUTH_MFA_RECOVERY_CODES:-10}"
 export GATEWAY_RATE_LIMIT_PER_MINUTE="${GATEWAY_RATE_LIMIT_PER_MINUTE:-600}"
 export GATEWAY_AUTH_RATE_LIMIT_PER_MINUTE="${GATEWAY_AUTH_RATE_LIMIT_PER_MINUTE:-30}"
 export VOCAB_DAILY_NEW="${VOCAB_DAILY_NEW:-10}"
@@ -56,6 +73,8 @@ console.log(`LOCAL_AUTH_JWT_SECRET=${secret()}`);
 console.log(`LOCAL_INTERNAL_SIGNING_SECRET=${secret()}`);
 console.log(`LOCAL_PLAYBACK_SIGNING_SECRET=${secret()}`);
 console.log(`LOCAL_QUESTION_SHUFFLE_SECRET=${secret()}`);
+// 32-byte key encoded as hex; TOTP secret encryption uchun.
+console.log(`LOCAL_AUTH_TOTP_ENCRYPTION_KEY=${randomBytes(32).toString("hex")}`);
 NODE
   chmod 600 "$LOCAL_SECRET_FILE" 2>/dev/null || true
 fi
@@ -63,13 +82,20 @@ fi
 source "$LOCAL_SECRET_FILE"
 
 export AUTH_JWT_SECRET="${AUTH_JWT_SECRET:-$LOCAL_AUTH_JWT_SECRET}"
-export AUTH_JWT_ISSUER="${AUTH_JWT_ISSUER:-assessment-platform-v5}"
-export AUTH_JWT_AUDIENCE="${AUTH_JWT_AUDIENCE:-assessment-platform}"
+export AUTH_JWT_ISSUER="${AUTH_JWT_ISSUER:-ielts-platform}"
+export AUTH_JWT_AUDIENCE="${AUTH_JWT_AUDIENCE:-ielts-platform}"
 export AUTH_ACCESS_TTL_MINUTES="${AUTH_ACCESS_TTL_MINUTES:-15}"
 export AUTH_REFRESH_TTL_DAYS="${AUTH_REFRESH_TTL_DAYS:-30}"
 export INTERNAL_SIGNING_SECRET="${INTERNAL_SIGNING_SECRET:-$LOCAL_INTERNAL_SIGNING_SECRET}"
 export PLAYBACK_SIGNING_SECRET="${PLAYBACK_SIGNING_SECRET:-$LOCAL_PLAYBACK_SIGNING_SECRET}"
 export QUESTION_SHUFFLE_SECRET="${QUESTION_SHUFFLE_SECRET:-$LOCAL_QUESTION_SHUFFLE_SECRET}"
+
+# MFA/TOTP secret encryption.
+# Bir xil persistent 32-byte keydan foydalanamiz.
+export MFA_ENCRYPTION_KEY="${MFA_ENCRYPTION_KEY:-$LOCAL_AUTH_TOTP_ENCRYPTION_KEY}"
+
+# Backward compatibility.
+export AUTH_TOTP_ENCRYPTION_KEY="${AUTH_TOTP_ENCRYPTION_KEY:-$MFA_ENCRYPTION_KEY}"
 
 # Next dev server telemetry'ni localda o'chiramiz.
 export NEXT_TELEMETRY_DISABLED=1
@@ -87,6 +113,9 @@ require_project() {
   [[ -f "$SCRIPT_DIR/apps/admin-web/package.json" ]] || fail "apps/admin-web topilmadi."
   [[ -f "$SCRIPT_DIR/apps/center-web/package.json" ]] || fail "apps/center-web topilmadi."
   [[ -f "$SCRIPT_DIR/apps/student-web/package.json" ]] || fail "apps/student-web topilmadi."
+  if [[ -d "$SCRIPT_DIR/apps/teacher-web" ]]; then
+    [[ -f "$SCRIPT_DIR/apps/teacher-web/package.json" ]] || fail "apps/teacher-web mavjud, lekin package.json topilmadi."
+  fi
 }
 
 version_checks() {
@@ -257,7 +286,7 @@ cmd_start() {
   require_project
   version_checks
 
-  if service_running backend || service_running admin || service_running center || service_running student; then
+  if service_running backend || service_running admin || service_running center || service_running student || service_running teacher; then
     warn "Ba'zi local processlar allaqachon ishlayapti."
     cmd_status
     printf "Avval restart qilaymi? [y/N]: "
@@ -271,18 +300,27 @@ cmd_start() {
   check_free_port 3001 admin
   check_free_port 3002 center
   check_free_port 3003 student
+  if [[ -d "$SCRIPT_DIR/apps/teacher-web" ]]; then
+    check_free_port 3004 teacher
+  fi
 
   prepare_database
   build_backend
   install_frontend_deps admin-web
   install_frontend_deps center-web
   install_frontend_deps student-web
+  if [[ -d "$SCRIPT_DIR/apps/teacher-web" ]]; then
+    install_frontend_deps teacher-web
+  fi
 
   # Eski loglarni tozalaymiz.
   : >"$(log_file backend)"
   : >"$(log_file admin)"
   : >"$(log_file center)"
   : >"$(log_file student)"
+  if [[ -d "$SCRIPT_DIR/apps/teacher-web" ]]; then
+    : >"$(log_file teacher)"
+  fi
 
   say "Backend ishga tushmoqda..."
   start_backend
@@ -292,18 +330,31 @@ cmd_start() {
   start_frontend admin-web 3001 admin
   start_frontend center-web 3002 center
   start_frontend student-web 3003 student
+  if [[ -d "$SCRIPT_DIR/apps/teacher-web" ]]; then
+    start_frontend teacher-web 3004 teacher
+  fi
 
   wait_url admin "http://localhost:3001" 60
   wait_url center "http://localhost:3002" 60
   wait_url student "http://localhost:3003" 60
+  if [[ -d "$SCRIPT_DIR/apps/teacher-web" ]]; then
+    wait_url teacher "http://localhost:3004" 60
+  fi
 
   # Vocabulary tekshiruvi frontend startup'ni bloklamaydi.
   seed_vocab_if_empty
 
   printf '\n'
-  ok "Assessment Platform V5 localda ishga tushdi."
-  printf '\n  Admin:   http://localhost:3001\n  Center:  http://localhost:3002\n  Student: http://localhost:3003\n  Backend: http://localhost:8080\n  Ready:   http://localhost:8080/ready\n\n'
+  ok "IELTS Platform localda ishga tushdi."
+  printf '\n  Admin:          http://localhost:3001\n  Center:         http://localhost:3002\n'
+  if [[ -d "$SCRIPT_DIR/apps/teacher-web" ]]; then
+    printf '  Teacher:        http://localhost:3004\n'
+  else
+    printf '  Teacher:        http://localhost:3002  (center-web, teacher role)\n'
+  fi
+  printf '  Student:        http://localhost:3003\n  Backend:        http://localhost:8080\n  Ready:          http://localhost:8080/ready\n\n'
   printf "Birinchi admin yo'q bo'lsa: bash local.sh admin\n"
+  printf "Privileged MFA: admin/center/teacher -> Security -> QR scan -> verify 6-digit code\n"
   printf "Loglar:                   bash local.sh logs backend\n"
   printf "To'xtatish:               bash local.sh stop\n"
 }
@@ -437,11 +488,17 @@ kill_service() {
 }
 
 cmd_stop() {
+  if [[ -d "$SCRIPT_DIR/apps/teacher-web" ]]; then
+    kill_service teacher
+  fi
   kill_service student
   kill_service center
   kill_service admin
   kill_service backend
   # npm/Next child processlar parent PID yopilgandan keyin portda qolib ketishi mumkin.
+  if [[ -d "$SCRIPT_DIR/apps/teacher-web" ]]; then
+    kill_port 3004 teacher
+  fi
   kill_port 3003 student
   kill_port 3002 center
   kill_port 3001 admin
@@ -469,13 +526,19 @@ cmd_status() {
   status_one admin "http://localhost:3001"
   status_one center "http://localhost:3002"
   status_one student "http://localhost:3003"
+  if [[ -d "$SCRIPT_DIR/apps/teacher-web" ]]; then
+    status_one teacher "http://localhost:3004"
+  else
+    printf '[1;36mINFO[0m     teacher  center-web orqali: http://localhost:3002
+'
+  fi
 }
 
 cmd_logs() {
   local name="${1:-backend}"
   case "$name" in
-    backend|admin|center|student) ;;
-    *) fail "logs uchun: backend | admin | center | student" ;;
+    backend|admin|center|student|teacher) ;;
+    *) fail "logs uchun: backend | admin | center | student | teacher" ;;
   esac
   local file
   file="$(log_file "$name")"
@@ -496,9 +559,9 @@ cmd_admin() {
   local email name password password2
   printf "Admin email: "
   IFS= read -r email
-  printf "Admin name [Platform Admin]: "
+  printf "Admin name [IELTS Platform Admin]: "
   IFS= read -r name
-  name="${name:-Platform Admin}"
+  name="${name:-IELTS Platform Admin}"
   printf "Admin password (10+ belgi): "
   IFS= read -r -s password
   printf '\nPassword qayta: '
@@ -541,7 +604,7 @@ cmd_seed_demo() {
   say "Migrationlar tekshirilmoqda..."
   (cd "$SCRIPT_DIR/backend" && MIGRATIONS_DIR="$SCRIPT_DIR/backend/migrations" go run ./cmd/compact-migrate)
   seed_vocab_if_empty
-  say "Demo center, adminlar, A1-C2 studentlar, group, assessment, SAT, listening, review, points va analytics data yaratilmoqda..."
+  say "Demo center, center admin, teacher, A1-C2 studentlar, group, vocabulary homework, assessment, SAT, listening, review, points va analytics data yaratilmoqda..."
   (cd "$SCRIPT_DIR/backend" && go run ./cmd/seed-demo --listening-storage "$LISTENING_STORAGE_DIR" "${@:1}")
   ok "Demo data tayyor. Loginlar yuqorida ko'rsatildi."
 }
@@ -550,9 +613,17 @@ cmd_qa() {
   require_project
   version_checks
   command -v python >/dev/null 2>&1 || command -v python3 >/dev/null 2>&1 || fail "Python QA script uchun kerak."
-  local py=python
+  local py=python qa_script
   command -v python >/dev/null 2>&1 || py=python3
-  "$py" "$SCRIPT_DIR/tools/qa_v5.py"
+  if [[ -f "$SCRIPT_DIR/tools/qa_ielts.py" ]]; then
+    qa_script="$SCRIPT_DIR/tools/qa_ielts.py"
+  elif [[ -f "$SCRIPT_DIR/tools/qa_v5.py" ]]; then
+    qa_script="$SCRIPT_DIR/tools/qa_v5.py"
+    warn "Legacy tools/qa_v5.py ishlatilmoqda. Fayl nomini qa_ielts.py ga yangilash tavsiya etiladi."
+  else
+    fail "QA script topilmadi (tools/qa_ielts.py)."
+  fi
+  "$py" "$qa_script"
 }
 
 cmd_clean() {
@@ -560,22 +631,24 @@ cmd_clean() {
   warn "Bu faqat build/log/node_modules cache'larini o'chiradi. PostgreSQL database O'CHIRILMAYDI."
   rm -rf "$RUN_DIR"
   rm -rf "$SCRIPT_DIR/apps/admin-web/.next" "$SCRIPT_DIR/apps/center-web/.next" "$SCRIPT_DIR/apps/student-web/.next"
+  [[ ! -d "$SCRIPT_DIR/apps/teacher-web" ]] || rm -rf "$SCRIPT_DIR/apps/teacher-web/.next"
   ok "Local runtime cache tozalandi."
 }
 
 usage() {
   cat <<'TXT'
-Assessment Platform V5 — Windows local launcher
+IELTS Platform — Windows local launcher
 
 Git Bash ichida:
-  bash local.sh start            Backend + 3 frontendni ishga tushiradi
+  bash local.sh start            Backend + IELTS frontendlarini ishga tushiradi
   bash local.sh stop             Hammasini to'xtatadi
   bash local.sh restart          Qayta ishga tushiradi
   bash local.sh status           Holatini ko'rsatadi
   bash local.sh logs backend     Backend logini ko'rsatadi
   bash local.sh logs admin       Admin frontend logi
-  bash local.sh logs center      Center frontend logi
+  bash local.sh logs center      Center/Teacher frontend logi
   bash local.sh logs student     Student frontend logi
+  bash local.sh logs teacher     Teacher frontend logi (agar apps/teacher-web mavjud bo'lsa)
   bash local.sh admin            Birinchi platform admin yaratadi
   bash local.sh reset-password   Local account passwordini reset qiladi
   bash local.sh seed-vocab       A1-C2 QA vocabulary seedini import qiladi
@@ -588,15 +661,25 @@ Optional environment:
   LOCAL_DB_PORT=5432
   LOCAL_DB_USER=postgres
   LOCAL_DB_PASSWORD=your_password
-  LOCAL_DB_NAME=assessment_v5
+  LOCAL_DB_NAME=ielts_platform
+
+AAL2/TOTP optional overrides:
+  REQUIRE_ADMIN_AAL2=true
+  REQUIRE_CENTER_AAL2=true
+  REQUIRE_TEACHER_AAL2=true
+  AUTH_TOTP_ISSUER=IELTS
+
+Teacher portal:
+  - apps/teacher-web mavjud bo'lsa: http://localhost:3004
+  - mavjud bo'lmasa: teacher center-web orqali http://localhost:3002 da ishlaydi
 
 Agar DATABASE_URL oldindan set qilingan bo'lsa, script local PostgreSQL sozlamalarini chetlab o'tadi.
 TXT
 }
 
 menu() {
-  printf '\nAssessment Platform V5 — Local\n'
-  printf '1) Start\n2) Stop\n3) Restart\n4) Status\n5) Backend logs\n6) Create admin\n7) Reset password\n8) Seed vocabulary\n9) Seed full demo data\n10) QA\n11) Clean cache\n0) Exit\n\nTanlang: '
+  printf '\nIELTS Platform — Local\n'
+  printf '1) Start\n2) Stop\n3) Restart\n4) Status\n5) Backend logs\n6) Create IELTS admin\n7) Reset password\n8) Seed vocabulary\n9) Seed full demo data\n10) QA\n11) Clean cache\n0) Exit\n\nTanlang: '
   local choice
   IFS= read -r choice
   case "$choice" in

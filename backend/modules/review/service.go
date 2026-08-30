@@ -12,9 +12,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/assessment-platform-v5/internal/authz"
-	"github.com/example/assessment-platform-v5/internal/clientx"
-	"github.com/example/assessment-platform-v5/internal/webx"
+	"github.com/example/ielts-platform/internal/authz"
+	"github.com/example/ielts-platform/internal/clientx"
+	"github.com/example/ielts-platform/internal/webx"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -285,7 +285,7 @@ func (s *Service) list(w http.ResponseWriter, r *http.Request) error {
 	var rows pgx.Rows
 	if a.Role == "student" {
 		rows, e = s.DB.Query(r.Context(), `SELECT id,organization_id,student_user_id,attempt_id,service_code,prompt_id,text_submission,audio_storage_key,status,coalesce(rubric,'{}'),review_notes,score,submitted_at,reviewed_at FROM submissions WHERE organization_id=$1 AND student_user_id=$2 ORDER BY submitted_at DESC`, a.OrgID, a.UserID)
-	} else if a.Role == "center_admin" {
+	} else if a.Role == "center" {
 		status := r.URL.Query().Get("status")
 		if status == "" {
 			status = "pending"
@@ -323,7 +323,7 @@ func (s *Service) audio(w http.ResponseWriter, r *http.Request) error {
 	if e != nil {
 		return e
 	}
-	if org.String() != a.OrgID || (a.Role == "student" && student.String() != a.UserID) || (a.Role != "student" && a.Role != "center_admin") {
+	if org.String() != a.OrgID || (a.Role == "student" && student.String() != a.UserID) || (a.Role != "student" && a.Role != "center") {
 		return webx.E(403, "forbidden", "not allowed")
 	}
 	if key == nil {
@@ -353,7 +353,7 @@ func (s *Service) review(w http.ResponseWriter, r *http.Request) error {
 	if e != nil {
 		return e
 	}
-	if a.Role != "center_admin" {
+	if a.Role != "center" {
 		return webx.E(403, "forbidden", "center admin required")
 	}
 	var x struct {

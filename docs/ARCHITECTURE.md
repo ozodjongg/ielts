@@ -1,46 +1,37 @@
 # Architecture
 
-## Request path
-
 ```text
-Vercel portal
-   |
-   | 1. POST /auth/<portal>/login for authentication
-   | 2. Bearer access JWT for API requests
-   v
-Go gateway (same monolith process)
-   |
-   | verify JWT signature / issuer / audience / expiry
-   | verify session id + auth_version in PostgreSQL
-   | resolve active profile and exact portal role
-   | attach HMAC-signed internal actor identity
-   v
-In-process module router
-   |
-   +-- identity
-   +-- tenant
-   +-- assessment
-   +-- vocabulary
-   +-- listening
-   +-- review
-   +-- sat
-   +-- points
-   +-- analytics
-   |
-   v
-One PostgreSQL database with schema-separated module ownership
+Admin / Center / Teacher / Student (Vercel)
+                     |
+                     | HTTPS + Bearer JWT
+                     v
+             Go gateway (Railway)
+                     |
+   JWT + server session + role + AAL + CORS
+                     |
+       HMAC-signed internal actor context
+                     v
+  identity | tenant | assessment | vocabulary
+  listening | review | sat | points | analytics
+                     |
+                     v
+          one Railway PostgreSQL database
+          with schema-separated ownership
 ```
 
-There are no internal HTTP service ports. Module-to-module calls stay inside one Go process through local handlers while preserving signed internal trust boundaries.
+There is one backend process and one HTTP port. Module-to-module calls remain in-process through local handlers; there are no internal microservice ports.
 
-## Authentication data
+## Role model
 
-The `identity` schema owns:
+- `admin`: platform scope, no center membership.
+- `center`: one organization, center administration.
+- `teacher`: one organization, teaching/vocabulary scope.
+- `student`: one organization, learner scope.
 
-- `profiles`
-- `auth_credentials`
-- `auth_sessions`
-- `auth_login_audit`
-- `audit_log`
+## Identity trust chain
 
-Access JWTs are stateless cryptographic credentials, but access is also checked against a server-side session row on every gateway request. This permits immediate revocation without waiting for JWT expiration.
+Gateway validates access token, server session, profile status, role and organization. It then signs an internal actor containing user ID, role, organization ID, email, AAL and session ID. Business modules reject unsigned/spoofed browser actor headers.
+
+## Data ownership
+
+Nine logical schemas remain: `identity`, `tenant`, `assessment`, `vocabulary`, `listening`, `review`, `sat`, `points`, `analytics`. This keeps code/data boundaries understandable without deployment complexity from nine services.

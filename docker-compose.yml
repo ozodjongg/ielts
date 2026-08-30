@@ -1,15 +1,15 @@
-name: assessment-platform-v5-monolith
+name: ielts-platform-monolith
 
 services:
   postgres:
     image: postgres:17-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-v5}
+      POSTGRES_USER: ${POSTGRES_USER:-ielts}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:-app}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-v5} -d ${POSTGRES_DB:-app}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ielts} -d ${POSTGRES_DB:-app}"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -24,22 +24,25 @@ services:
     restart: unless-stopped
     environment:
       BACKEND_ADDR: :8080
-      DATABASE_URL: postgres://${POSTGRES_USER:-v5}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER:-ielts}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable
       AUTO_MIGRATE: "false"
       VOCAB_AUTO_IMPORT: "true"
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?set AUTH_JWT_SECRET}
-      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-assessment-platform-v5}
-      AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-assessment-platform}
+      AUTH_JWT_ISSUER: ${AUTH_JWT_ISSUER:-ielts-platform}
+      AUTH_JWT_AUDIENCE: ${AUTH_JWT_AUDIENCE:-ielts-platform}
       AUTH_ACCESS_TTL_MINUTES: ${AUTH_ACCESS_TTL_MINUTES:-15}
       AUTH_REFRESH_TTL_DAYS: ${AUTH_REFRESH_TTL_DAYS:-30}
       INTERNAL_SIGNING_SECRET: ${INTERNAL_SIGNING_SECRET:?set INTERNAL_SIGNING_SECRET}
       PLAYBACK_SIGNING_SECRET: ${PLAYBACK_SIGNING_SECRET:?set PLAYBACK_SIGNING_SECRET}
       QUESTION_SHUFFLE_SECRET: ${QUESTION_SHUFFLE_SECRET:?set QUESTION_SHUFFLE_SECRET}
+      MFA_ENCRYPTION_KEY: ${MFA_ENCRYPTION_KEY:?set MFA_ENCRYPTION_KEY}
       ADMIN_ORIGINS: ${ADMIN_ORIGINS:-http://localhost:3001}
       CENTER_ORIGINS: ${CENTER_ORIGINS:-http://localhost:3002}
       STUDENT_ORIGINS: ${STUDENT_ORIGINS:-http://localhost:3003}
-      REQUIRE_ADMIN_AAL2: ${REQUIRE_ADMIN_AAL2:-false}
-      REQUIRE_CENTER_AAL2: ${REQUIRE_CENTER_AAL2:-false}
+      TEACHER_ORIGINS: ${TEACHER_ORIGINS:-http://localhost:3004}
+      REQUIRE_ADMIN_AAL2: ${REQUIRE_ADMIN_AAL2:-true}
+      REQUIRE_CENTER_AAL2: ${REQUIRE_CENTER_AAL2:-true}
+      REQUIRE_TEACHER_AAL2: ${REQUIRE_TEACHER_AAL2:-true}
       GATEWAY_RATE_LIMIT_PER_MINUTE: ${GATEWAY_RATE_LIMIT_PER_MINUTE:-600}
       GATEWAY_AUTH_RATE_LIMIT_PER_MINUTE: ${GATEWAY_AUTH_RATE_LIMIT_PER_MINUTE:-30}
       VOCAB_DAILY_NEW: ${VOCAB_DAILY_NEW:-10}
@@ -99,13 +102,25 @@ services:
     ports:
       - "3003:3000"
 
+  teacher-web:
+    build:
+      context: ./apps/teacher-web
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3004:3000"
+
   compact-migrate:
     profiles: ["tools"]
     build:
       context: ./backend
       args: { SERVICE: compact-migrate }
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER:-v5}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER:-ielts}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable
       MIGRATIONS_DIR: /migrations
     depends_on:
       postgres:
@@ -119,7 +134,7 @@ services:
       context: ./backend
       args: { SERVICE: bootstrap-admin }
     environment:
-      IDENTITY_DATABASE_URL: postgres://${POSTGRES_USER:-v5}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable&search_path=identity
+      IDENTITY_DATABASE_URL: postgres://${POSTGRES_USER:-ielts}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable&search_path=identity
     depends_on:
       backend:
         condition: service_healthy
@@ -130,7 +145,7 @@ services:
       context: ./backend
       args: { SERVICE: reset-password }
     environment:
-      IDENTITY_DATABASE_URL: postgres://${POSTGRES_USER:-v5}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable&search_path=identity
+      IDENTITY_DATABASE_URL: postgres://${POSTGRES_USER:-ielts}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable&search_path=identity
     depends_on:
       backend:
         condition: service_healthy
@@ -141,7 +156,7 @@ services:
       context: ./backend
       args: { SERVICE: vocab-import }
     environment:
-      VOCABULARY_DATABASE_URL: postgres://${POSTGRES_USER:-v5}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable&search_path=vocabulary
+      VOCABULARY_DATABASE_URL: postgres://${POSTGRES_USER:-ielts}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-app}?sslmode=disable&search_path=vocabulary
     depends_on:
       backend:
         condition: service_healthy

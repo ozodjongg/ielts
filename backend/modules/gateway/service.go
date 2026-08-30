@@ -14,10 +14,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/example/assessment-platform-v5/internal/auth"
-	"github.com/example/assessment-platform-v5/internal/authz"
-	"github.com/example/assessment-platform-v5/internal/clientx"
-	"github.com/example/assessment-platform-v5/internal/webx"
+	"github.com/example/ielts-platform/internal/auth"
+	"github.com/example/ielts-platform/internal/authz"
+	"github.com/example/ielts-platform/internal/clientx"
+	"github.com/example/ielts-platform/internal/webx"
 )
 
 type Profile struct {
@@ -30,22 +30,22 @@ type Profile struct {
 	CurrentLevel   *string `json:"current_level"`
 }
 type Service struct {
-	IdentityHandler                             http.Handler
-	Verifier                                    *auth.Verifier
-	Identity                                    *clientx.Client
-	InternalSecret                              string
-	Handlers                                    map[string]http.Handler
-	ReadyChecks                                 map[string]func(context.Context) error
-	AdminOrigins, CenterOrigins, StudentOrigins []string
-	RequireAdminAAL2, RequireCenterAAL2         bool
-	Limiter                                     *Limiter
-	AuthLimiter                                 *Limiter
+	IdentityHandler                                             http.Handler
+	Verifier                                                    *auth.Verifier
+	Identity                                                    *clientx.Client
+	InternalSecret                                              string
+	Handlers                                                    map[string]http.Handler
+	ReadyChecks                                                 map[string]func(context.Context) error
+	AdminOrigins, CenterOrigins, TeacherOrigins, StudentOrigins []string
+	RequireAdminAAL2, RequireCenterAAL2, RequireTeacherAAL2     bool
+	Limiter                                                     *Limiter
+	AuthLimiter                                                 *Limiter
 }
 
 func (s *Service) Router() http.Handler {
 	m := http.NewServeMux()
 	m.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		webx.JSON(w, 200, map[string]any{"status": "ok", "service": "backend", "mode": "modular_monolith", "version": "v5"})
+		webx.JSON(w, 200, map[string]any{"status": "ok", "service": "backend", "mode": "modular_monolith", "version": "ielts-1"})
 	})
 	m.HandleFunc("GET /ready", s.ready)
 	m.HandleFunc("POST /auth/{portal}/{action}", s.authEndpoint)
@@ -96,7 +96,7 @@ func (s *Service) ready(w http.ResponseWriter, r *http.Request) {
 func (s *Service) proxy(w http.ResponseWriter, r *http.Request) {
 	requestID := r.Header.Get("X-Request-ID")
 	if requestID == "" {
-		requestID = fmt.Sprintf("v5-%d", time.Now().UnixNano())
+		requestID = fmt.Sprintf("ielts-%d", time.Now().UnixNano())
 	}
 	w.Header().Set("X-Request-ID", requestID)
 	role, service, downPath, ok := parsePath(r.URL.Path)
@@ -136,12 +136,13 @@ func (s *Service) proxy(w http.ResponseWriter, r *http.Request) {
 	if prof.OrganizationID != nil {
 		org = *prof.OrganizationID
 	}
-	if role != "platform_admin" && org == "" {
+	if role != "admin" && org == "" {
 		webx.JSON(w, 403, map[string]any{"error": "tenant_missing", "message": "account is not attached to an active learning center", "request_id": requestID})
 		return
 	}
 	mutating := r.Method == http.MethodPost || r.Method == http.MethodPatch || r.Method == http.MethodDelete || r.Method == http.MethodPut
-	if mutating && ((role == "platform_admin" && s.RequireAdminAAL2) || (role == "center_admin" && s.RequireCenterAAL2)) && p.AAL != "aal2" {
+	mfaBootstrap := service == "identity" && strings.HasPrefix(downPath, "/v1/mfa/")
+	if mutating && !mfaBootstrap && ((role == "admin" && s.RequireAdminAAL2) || (role == "center" && s.RequireCenterAAL2) || (role == "teacher" && s.RequireTeacherAAL2)) && p.AAL != "aal2" {
 		webx.JSON(w, 403, map[string]any{"error": "mfa_required", "message": "AAL2/MFA is required for this sensitive action", "request_id": requestID})
 		return
 	}
@@ -150,7 +151,7 @@ func (s *Service) proxy(w http.ResponseWriter, r *http.Request) {
 		webx.JSON(w, 429, map[string]any{"error": "rate_limited", "message": "too many requests", "request_id": requestID})
 		return
 	}
-	actor := authz.Actor{UserID: prof.UserID, Role: prof.Role, OrgID: org, Email: prof.Email, AAL: p.AAL}
+	actor := authz.Actor{UserID: prof.UserID, Role: prof.Role, OrgID: org, Email: prof.Email, AAL: p.AAL, SessionID: p.SessionID}
 	h := s.Handlers[service]
 	if h == nil {
 		webx.JSON(w, http.StatusServiceUnavailable, map[string]any{"error": "module_unavailable", "request_id": requestID})
@@ -172,9 +173,11 @@ func (s *Service) proxy(w http.ResponseWriter, r *http.Request) {
 func portalRole(portal string) (string, bool) {
 	switch portal {
 	case "admin":
-		return "platform_admin", true
+		return "admin", true
 	case "center":
-		return "center_admin", true
+		return "center", true
+	case "teacher":
+		return "teacher", true
 	case "student":
 		return "student", true
 	default:
@@ -200,13 +203,13 @@ func requestIP(r *http.Request) string {
 func (s *Service) authEndpoint(w http.ResponseWriter, r *http.Request) {
 	requestID := r.Header.Get("X-Request-ID")
 	if requestID == "" {
-		requestID = fmt.Sprintf("v5-%d", time.Now().UnixNano())
+		requestID = fmt.Sprintf("ielts-%d", time.Now().UnixNano())
 	}
 	w.Header().Set("X-Request-ID", requestID)
 	portal := r.PathValue("portal")
 	action := r.PathValue("action")
 	role, ok := portalRole(portal)
-	if !ok || (action != "login" && action != "refresh" && action != "logout") {
+	if !ok || (action != "login" && action != "refresh" && action != "logout" && action != "mfa-verify") {
 		webx.JSON(w, http.StatusNotFound, map[string]any{"error": "not_found", "request_id": requestID})
 		return
 	}
@@ -268,9 +271,11 @@ func parsePath(path string) (role, service, down string, ok bool) {
 	}
 	switch p[0] {
 	case "admin":
-		role = "platform_admin"
+		role = "admin"
 	case "center":
-		role = "center_admin"
+		role = "center"
+	case "teacher":
+		role = "teacher"
 	case "student":
 		role = "student"
 	default:
@@ -294,10 +299,12 @@ func parsePath(path string) (role, service, down string, ok bool) {
 func allowedForRequest(role, service, downPath, method string) bool {
 	var list string
 	switch role {
-	case "platform_admin":
+	case "admin":
 		list = "identity tenant analytics vocabulary points assessment sat"
-	case "center_admin":
+	case "center":
 		list = "identity tenant assessment listening review sat analytics points vocabulary"
+	case "teacher":
+		list = "identity tenant vocabulary assessment listening sat"
 	case "student":
 		list = "identity assessment vocabulary listening review sat points analytics"
 		// Students may read only their organization's effective service availability.
@@ -317,7 +324,7 @@ func allowedForRequest(role, service, downPath, method string) bool {
 func copyRequestHeaders(dst, src http.Header) {
 	for k, vs := range src {
 		lk := strings.ToLower(k)
-		if lk == "connection" || lk == "keep-alive" || lk == "proxy-authenticate" || lk == "proxy-authorization" || lk == "te" || lk == "trailers" || lk == "transfer-encoding" || lk == "upgrade" || strings.HasPrefix(lk, "x-v5-") {
+		if lk == "connection" || lk == "keep-alive" || lk == "proxy-authenticate" || lk == "proxy-authorization" || lk == "te" || lk == "trailers" || lk == "transfer-encoding" || lk == "upgrade" || strings.HasPrefix(lk, "x-ielts-") {
 			continue
 		}
 		for _, v := range vs {
@@ -327,10 +334,12 @@ func copyRequestHeaders(dst, src http.Header) {
 }
 func (s *Service) origins(role string) []string {
 	switch role {
-	case "platform_admin":
+	case "admin":
 		return s.AdminOrigins
-	case "center_admin":
+	case "center":
 		return s.CenterOrigins
+	case "teacher":
+		return s.TeacherOrigins
 	case "student":
 		return s.StudentOrigins
 	}
@@ -357,8 +366,9 @@ func (s *Service) originAllowedAny(origin string) bool {
 	if origin == "" {
 		return true
 	}
-	return s.originAllowed("platform_admin", origin) ||
-		s.originAllowed("center_admin", origin) ||
+	return s.originAllowed("admin", origin) ||
+		s.originAllowed("center", origin) ||
+		s.originAllowed("teacher", origin) ||
 		s.originAllowed("student", origin)
 }
 
@@ -369,9 +379,11 @@ func (s *Service) cors(next http.Handler) http.Handler {
 		role := ""
 		switch {
 		case strings.HasPrefix(path, "/api/admin/"), strings.HasPrefix(path, "/auth/admin/"):
-			role = "platform_admin"
+			role = "admin"
 		case strings.HasPrefix(path, "/api/center/"), strings.HasPrefix(path, "/auth/center/"):
-			role = "center_admin"
+			role = "center"
+		case strings.HasPrefix(path, "/api/teacher/"), strings.HasPrefix(path, "/auth/teacher/"):
+			role = "teacher"
 		case strings.HasPrefix(path, "/api/student/"), strings.HasPrefix(path, "/auth/student/"):
 			role = "student"
 		}

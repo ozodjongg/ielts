@@ -1,9 +1,9 @@
 {
   "ok": true,
-  "frontend_module_calls": 98,
-  "frontend_auth_calls": 9,
-  "matched_module_calls": 98,
-  "backend_public_routes": 71,
+  "frontend_module_calls": 133,
+  "frontend_auth_calls": 16,
+  "matched_module_calls": 133,
+  "backend_public_routes": 84,
   "issues": [],
   "calls": [
     {
@@ -79,6 +79,38 @@
       "method": "GET"
     },
     {
+      "file": "apps/admin-web/src/app/(portal)/security/page.tsx",
+      "line": 17,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/mfa/status",
+      "method": "GET"
+    },
+    {
+      "file": "apps/admin-web/src/app/(portal)/security/page.tsx",
+      "line": 19,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/mfa/setup",
+      "method": "POST"
+    },
+    {
+      "file": "apps/admin-web/src/app/(portal)/security/page.tsx",
+      "line": 20,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/mfa/verify",
+      "method": "POST"
+    },
+    {
+      "file": "apps/admin-web/src/app/(portal)/security/page.tsx",
+      "line": 21,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/mfa/disable",
+      "method": "POST"
+    },
+    {
       "file": "apps/admin-web/src/app/(portal)/services/page.tsx",
       "line": 21,
       "portal": "admin",
@@ -112,7 +144,7 @@
     },
     {
       "file": "apps/admin-web/src/components/auth-provider.tsx",
-      "line": 36,
+      "line": 37,
       "portal": null,
       "service": "identity",
       "suffix": "/me",
@@ -391,6 +423,38 @@
       "method": "POST"
     },
     {
+      "file": "apps/center-web/src/app/(portal)/security/page.tsx",
+      "line": 17,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/mfa/status",
+      "method": "GET"
+    },
+    {
+      "file": "apps/center-web/src/app/(portal)/security/page.tsx",
+      "line": 19,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/mfa/setup",
+      "method": "POST"
+    },
+    {
+      "file": "apps/center-web/src/app/(portal)/security/page.tsx",
+      "line": 20,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/mfa/verify",
+      "method": "POST"
+    },
+    {
+      "file": "apps/center-web/src/app/(portal)/security/page.tsx",
+      "line": 21,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/mfa/disable",
+      "method": "POST"
+    },
+    {
       "file": "apps/center-web/src/app/(portal)/settings/page.tsx",
       "line": 14,
       "portal": "center",
@@ -431,44 +495,228 @@
       "method": "PATCH"
     },
     {
-      "file": "apps/center-web/src/app/(portal)/vocabulary-manager/page.tsx",
-      "line": 125,
+      "file": "apps/center-web/src/app/(portal)/teachers/page.tsx",
+      "line": 11,
       "portal": "center",
-      "service": "vocabulary",
-      "suffix": "/center/contributions?limit=100",
+      "service": "tenant",
+      "suffix": "/teachers",
       "method": "GET"
     },
     {
-      "file": "apps/center-web/src/app/(portal)/vocabulary-manager/page.tsx",
-      "line": 159,
+      "file": "apps/center-web/src/app/(portal)/teachers/page.tsx",
+      "line": 12,
       "portal": "center",
-      "service": "vocabulary",
-      "suffix": "/center/words/check",
+      "service": "tenant",
+      "suffix": "/teachers",
       "method": "POST"
     },
     {
-      "file": "apps/center-web/src/app/(portal)/vocabulary-manager/page.tsx",
-      "line": 183,
+      "file": "apps/center-web/src/app/(portal)/teachers/page.tsx",
+      "line": 13,
       "portal": "center",
-      "service": "vocabulary",
-      "suffix": "/center/words",
-      "method": "POST"
-    },
-    {
-      "file": "apps/center-web/src/app/(portal)/vocabulary-manager/page.tsx",
-      "line": 225,
-      "portal": "center",
-      "service": "vocabulary",
-      "suffix": "/center/words/batch",
-      "method": "POST"
+      "service": "tenant",
+      "suffix": "/teachers/{param}",
+      "method": "PATCH"
     },
     {
       "file": "apps/center-web/src/components/auth-provider.tsx",
-      "line": 36,
+      "line": 37,
       "portal": null,
       "service": "identity",
       "suffix": "/me",
       "method": "GET"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/dictionary/page.tsx",
+      "line": 40,
+      "portal": "teacher",
+      "service": "vocabulary",
+      "suffix": "/search?q={param}&level={param}&limit=50",
+      "method": "GET"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/dictionary/page.tsx",
+      "line": 49,
+      "portal": "teacher",
+      "service": "vocabulary",
+      "suffix": "/words/{param}/synonyms",
+      "method": "GET"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/groups/page.tsx",
+      "line": 4,
+      "portal": "teacher",
+      "service": "tenant",
+      "suffix": "/groups",
+      "method": "GET"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/homework/page.tsx",
+      "line": 5,
+      "portal": "teacher",
+      "service": "tenant",
+      "suffix": "/students",
+      "method": "GET"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/homework/page.tsx",
+      "line": 5,
+      "portal": "teacher",
+      "service": "vocabulary",
+      "suffix": "/teacher/homework",
+      "method": "GET"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/homework/page.tsx",
+      "line": 5,
+      "portal": "teacher",
+      "service": "vocabulary",
+      "suffix": "/search?q={param}&limit=20",
+      "method": "GET"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/homework/page.tsx",
+      "line": 5,
+      "portal": "teacher",
+      "service": "vocabulary",
+      "suffix": "/teacher/homework",
+      "method": "POST"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/page.tsx",
+      "line": 8,
+      "portal": "teacher",
+      "service": "tenant",
+      "suffix": "/students",
+      "method": "GET"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/page.tsx",
+      "line": 8,
+      "portal": "teacher",
+      "service": "vocabulary",
+      "suffix": "/teacher/homework",
+      "method": "GET"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/security/page.tsx",
+      "line": 17,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/mfa/status",
+      "method": "GET"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/security/page.tsx",
+      "line": 19,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/mfa/setup",
+      "method": "POST"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/security/page.tsx",
+      "line": 20,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/mfa/verify",
+      "method": "POST"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/security/page.tsx",
+      "line": 21,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/mfa/disable",
+      "method": "POST"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/students/page.tsx",
+      "line": 36,
+      "portal": "teacher",
+      "service": "tenant",
+      "suffix": "/students",
+      "method": "GET"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/students/page.tsx",
+      "line": 42,
+      "portal": "teacher",
+      "service": "vocabulary",
+      "suffix": "/teacher/students/{param}/words",
+      "method": "GET"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/students/page.tsx",
+      "line": 63,
+      "portal": "teacher",
+      "service": "vocabulary",
+      "suffix": "/search?q={param}&limit=30",
+      "method": "GET"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/students/page.tsx",
+      "line": 72,
+      "portal": "teacher",
+      "service": "vocabulary",
+      "suffix": "/teacher/students/{param}/words",
+      "method": "POST"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/vocabulary-manager/page.tsx",
+      "line": 125,
+      "portal": "teacher",
+      "service": "vocabulary",
+      "suffix": "/teacher/contributions?limit=100",
+      "method": "GET"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/vocabulary-manager/page.tsx",
+      "line": 159,
+      "portal": "teacher",
+      "service": "vocabulary",
+      "suffix": "/teacher/words/check",
+      "method": "POST"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/vocabulary-manager/page.tsx",
+      "line": 183,
+      "portal": "teacher",
+      "service": "vocabulary",
+      "suffix": "/teacher/words",
+      "method": "POST"
+    },
+    {
+      "file": "apps/teacher-web/src/app/(portal)/vocabulary-manager/page.tsx",
+      "line": 225,
+      "portal": "teacher",
+      "service": "vocabulary",
+      "suffix": "/teacher/words/batch",
+      "method": "POST"
+    },
+    {
+      "file": "apps/teacher-web/src/components/auth-provider.tsx",
+      "line": 37,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/me",
+      "method": "GET"
+    },
+    {
+      "file": "apps/student-web/src/app/(portal)/assigned/page.tsx",
+      "line": 62,
+      "portal": "student",
+      "service": "vocabulary",
+      "suffix": "/assigned",
+      "method": "GET"
+    },
+    {
+      "file": "apps/student-web/src/app/(portal)/assigned/page.tsx",
+      "line": 92,
+      "portal": "student",
+      "service": "vocabulary",
+      "suffix": "/assigned/homework/{param}/complete",
+      "method": "POST"
     },
     {
       "file": "apps/student-web/src/app/(portal)/english/page.tsx",
@@ -735,6 +983,38 @@
       "method": "POST"
     },
     {
+      "file": "apps/student-web/src/app/(portal)/security/page.tsx",
+      "line": 17,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/mfa/status",
+      "method": "GET"
+    },
+    {
+      "file": "apps/student-web/src/app/(portal)/security/page.tsx",
+      "line": 19,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/mfa/setup",
+      "method": "POST"
+    },
+    {
+      "file": "apps/student-web/src/app/(portal)/security/page.tsx",
+      "line": 20,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/mfa/verify",
+      "method": "POST"
+    },
+    {
+      "file": "apps/student-web/src/app/(portal)/security/page.tsx",
+      "line": 21,
+      "portal": null,
+      "service": "identity",
+      "suffix": "/mfa/disable",
+      "method": "POST"
+    },
+    {
       "file": "apps/student-web/src/app/(portal)/submissions/page.tsx",
       "line": 27,
       "portal": "student",
@@ -784,7 +1064,7 @@
     },
     {
       "file": "apps/student-web/src/components/auth-provider.tsx",
-      "line": 36,
+      "line": 37,
       "portal": null,
       "service": "identity",
       "suffix": "/me",
@@ -811,6 +1091,12 @@
       "method": "POST"
     },
     {
+      "file": "apps/admin-web/src/components/auth-provider.tsx",
+      "portal": "dynamic",
+      "action": "mfa-verify",
+      "method": "POST"
+    },
+    {
       "file": "apps/center-web/src/components/auth-provider.tsx",
       "portal": "dynamic",
       "action": "login",
@@ -829,6 +1115,36 @@
       "method": "POST"
     },
     {
+      "file": "apps/center-web/src/components/auth-provider.tsx",
+      "portal": "dynamic",
+      "action": "mfa-verify",
+      "method": "POST"
+    },
+    {
+      "file": "apps/teacher-web/src/components/auth-provider.tsx",
+      "portal": "dynamic",
+      "action": "login",
+      "method": "POST"
+    },
+    {
+      "file": "apps/teacher-web/src/components/auth-provider.tsx",
+      "portal": "dynamic",
+      "action": "refresh",
+      "method": "POST"
+    },
+    {
+      "file": "apps/teacher-web/src/components/auth-provider.tsx",
+      "portal": "dynamic",
+      "action": "logout",
+      "method": "POST"
+    },
+    {
+      "file": "apps/teacher-web/src/components/auth-provider.tsx",
+      "portal": "dynamic",
+      "action": "mfa-verify",
+      "method": "POST"
+    },
+    {
       "file": "apps/student-web/src/components/auth-provider.tsx",
       "portal": "dynamic",
       "action": "login",
@@ -844,6 +1160,12 @@
       "file": "apps/student-web/src/components/auth-provider.tsx",
       "portal": "dynamic",
       "action": "logout",
+      "method": "POST"
+    },
+    {
+      "file": "apps/student-web/src/components/auth-provider.tsx",
+      "portal": "dynamic",
+      "action": "mfa-verify",
       "method": "POST"
     }
   ]

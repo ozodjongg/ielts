@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/assessment-platform-v5/internal/dbx"
-	"github.com/example/assessment-platform-v5/internal/passwordhash"
+	"github.com/example/ielts-platform/internal/dbx"
+	"github.com/example/ielts-platform/internal/passwordhash"
 	"github.com/google/uuid"
 )
 
@@ -65,7 +65,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer tx.Rollback(ctx)
-	if _, err = tx.Exec(ctx, `INSERT INTO profiles(user_id,organization_id,role,email,full_name,status) VALUES($1,NULL,'platform_admin',$2,$3,'active')`, userID, cleanEmail, cleanName); err != nil {
+	if _, err = tx.Exec(ctx, `INSERT INTO profiles(user_id,organization_id,role,email,full_name,status) VALUES($1,NULL,'admin',$2,$3,'active')`, userID, cleanEmail, cleanName); err != nil {
 		log.Fatal(err)
 	}
 	if _, err = tx.Exec(ctx, `INSERT INTO auth_credentials(user_id,password_hash) VALUES($1,$2)`, userID, hash); err != nil {
@@ -74,5 +74,5 @@ func main() {
 	if err = tx.Commit(ctx); err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("platform_admin created: %s (%s)\n", cleanEmail, userID)
+	fmt.Printf("admin created: %s (%s)\n", cleanEmail, userID)
 }

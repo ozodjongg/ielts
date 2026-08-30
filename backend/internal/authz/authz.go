@@ -12,20 +12,21 @@ import (
 	"time"
 )
 
-type Actor struct{ UserID, Role, OrgID, Email, AAL string }
+type Actor struct{ UserID, Role, OrgID, Email, AAL, SessionID string }
 
 const (
-	HUser  = "X-V5-User-ID"
-	HRole  = "X-V5-Role"
-	HOrg   = "X-V5-Org-ID"
-	HEmail = "X-V5-Email"
-	HAAL   = "X-V5-AAL"
-	HTS    = "X-V5-Timestamp"
-	HSig   = "X-V5-Signature"
+	HUser    = "X-IELTS-User-ID"
+	HRole    = "X-IELTS-Role"
+	HOrg     = "X-IELTS-Org-ID"
+	HEmail   = "X-IELTS-Email"
+	HAAL     = "X-IELTS-AAL"
+	HSession = "X-IELTS-Session-ID"
+	HTS      = "X-IELTS-Timestamp"
+	HSig     = "X-IELTS-Signature"
 )
 
 func canonical(method, path, ts string, a Actor) string {
-	return strings.Join([]string{method, path, ts, a.UserID, a.Role, a.OrgID, a.Email, a.AAL}, "\n")
+	return strings.Join([]string{method, path, ts, a.UserID, a.Role, a.OrgID, a.Email, a.AAL, a.SessionID}, "\n")
 }
 func Sign(secret, method, path, ts string, a Actor) string {
 	m := hmac.New(sha256.New, []byte(secret))
@@ -39,11 +40,12 @@ func Attach(h http.Header, secret, method, path string, a Actor) {
 	h.Set(HOrg, a.OrgID)
 	h.Set(HEmail, a.Email)
 	h.Set(HAAL, a.AAL)
+	h.Set(HSession, a.SessionID)
 	h.Set(HTS, ts)
 	h.Set(HSig, Sign(secret, method, path, ts, a))
 }
 func Verify(r *http.Request, secret string) (Actor, error) {
-	a := Actor{UserID: r.Header.Get(HUser), Role: r.Header.Get(HRole), OrgID: r.Header.Get(HOrg), Email: r.Header.Get(HEmail), AAL: r.Header.Get(HAAL)}
+	a := Actor{UserID: r.Header.Get(HUser), Role: r.Header.Get(HRole), OrgID: r.Header.Get(HOrg), Email: r.Header.Get(HEmail), AAL: r.Header.Get(HAAL), SessionID: r.Header.Get(HSession)}
 	ts := r.Header.Get(HTS)
 	sig := r.Header.Get(HSig)
 	n, err := strconv.ParseInt(ts, 10, 64)
@@ -59,7 +61,7 @@ func Verify(r *http.Request, secret string) (Actor, error) {
 	if !hmac.Equal(got, wb) {
 		return Actor{}, errors.New("invalid internal signature")
 	}
-	if a.UserID == "" || a.Role == "" {
+	if a.UserID == "" || a.Role == "" || a.SessionID == "" {
 		return Actor{}, errors.New("missing internal identity")
 	}
 	return a, nil
@@ -79,12 +81,12 @@ func InternalServiceSignature(secret, service, method, path, ts string) string {
 }
 func AttachService(h http.Header, secret, service, method, path string) {
 	ts := strconv.FormatInt(time.Now().Unix(), 10)
-	h.Set("X-V5-Service", service)
+	h.Set("X-IELTS-Service", service)
 	h.Set(HTS, ts)
-	h.Set("X-V5-Service-Signature", InternalServiceSignature(secret, service, method, path, ts))
+	h.Set("X-IELTS-Service-Signature", InternalServiceSignature(secret, service, method, path, ts))
 }
 func VerifyService(r *http.Request, secret string, allowed ...string) error {
-	svc := r.Header.Get("X-V5-Service")
+	svc := r.Header.Get("X-IELTS-Service")
 	ok := false
 	for _, a := range allowed {
 		if svc == a {
@@ -100,7 +102,7 @@ func VerifyService(r *http.Request, secret string, allowed ...string) error {
 		return errors.New("stale service signature")
 	}
 	want := InternalServiceSignature(secret, svc, r.Method, r.URL.RequestURI(), ts)
-	a, b := hex.DecodeString(r.Header.Get("X-V5-Service-Signature"))
+	a, b := hex.DecodeString(r.Header.Get("X-IELTS-Service-Signature"))
 	if b != nil {
 		return b
 	}
@@ -111,7 +113,7 @@ func VerifyService(r *http.Request, secret string, allowed ...string) error {
 	return nil
 }
 func StripInbound(h http.Header) {
-	for _, k := range []string{HUser, HRole, HOrg, HEmail, HAAL, HTS, HSig, "X-V5-Service", "X-V5-Service-Signature"} {
+	for _, k := range []string{HUser, HRole, HOrg, HEmail, HAAL, HSession, HTS, HSig, "X-IELTS-Service", "X-IELTS-Service-Signature"} {
 		h.Del(k)
 	}
 }

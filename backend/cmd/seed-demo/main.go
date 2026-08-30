@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/assessment-platform-v5/internal/dbx"
-	"github.com/example/assessment-platform-v5/internal/passwordhash"
+	"github.com/example/ielts-platform/internal/dbx"
+	"github.com/example/ielts-platform/internal/passwordhash"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -107,7 +107,7 @@ func main() {
 	// Learning center.
 	var orgID uuid.UUID
 	err = db.QueryRow(ctx, `INSERT INTO tenant.organizations(name,slug,status,subscription_status,trial_ends_at,timezone,active_student_limit)
-		VALUES('V5 Demo Learning Center','v5-demo-center','active','active',now()+interval '365 days','Asia/Tashkent',200)
+		VALUES('IELTS Demo Learning Center','ielts-demo-center','active','active',now()+interval '365 days','Asia/Tashkent',200)
 		ON CONFLICT(slug) DO UPDATE SET name=excluded.name,status='active',subscription_status='active',trial_ends_at=excluded.trial_ends_at,active_student_limit=excluded.active_student_limit,updated_at=now()
 		RETURNING id`).Scan(&orgID)
 	if err != nil {
@@ -127,18 +127,18 @@ func main() {
 	}
 	level := func(v string) *string { return &v }
 	users := []user{
-		{stable("platform-admin"), "platform_admin", "demo.admin@v5.local", "Demo Platform Admin", nil},
-		{stable("center-admin"), "center_admin", "demo.center@v5.local", "Demo Center Admin", nil},
-		{stable("student-a1"), "student", "student.a1@v5.local", "Aziza A1", level("A1")},
-		{stable("student-a2"), "student", "student.a2@v5.local", "Bekzod A2", level("A2")},
-		{stable("student-b1"), "student", "student.b1@v5.local", "Dilnoza B1", level("B1")},
-		{stable("student-b2"), "student", "student.b2@v5.local", "Jasur B2", level("B2")},
-		{stable("student-c1"), "student", "student.c1@v5.local", "Madina C1", level("C1")},
-		{stable("student-c2"), "student", "student.c2@v5.local", "Sardor C2", level("C2")},
+		{stable("platform-admin"), "admin", "demo.admin@ielts.local", "Demo Platform Admin", nil},
+		{stable("center-admin"), "center", "demo.center@ielts.local", "Demo Center Admin", nil},
+		{stable("student-a1"), "student", "student.a1@ielts.local", "Aziza A1", level("A1")},
+		{stable("student-a2"), "student", "student.a2@ielts.local", "Bekzod A2", level("A2")},
+		{stable("student-b1"), "student", "student.b1@ielts.local", "Dilnoza B1", level("B1")},
+		{stable("student-b2"), "student", "student.b2@ielts.local", "Jasur B2", level("B2")},
+		{stable("student-c1"), "student", "student.c1@ielts.local", "Madina C1", level("C1")},
+		{stable("student-c2"), "student", "student.c2@ielts.local", "Sardor C2", level("C2")},
 	}
 	for _, u := range users {
 		var org any = orgID
-		if u.Role == "platform_admin" {
+		if u.Role == "admin" {
 			org = nil
 		}
 		mustExec(ctx, db, `INSERT INTO identity.profiles(user_id,organization_id,role,email,full_name,status,current_level,locale)
@@ -269,10 +269,10 @@ func main() {
 	}
 
 	fmt.Println("Demo data ready.")
-	fmt.Printf("Center: %s (%s)\n", "V5 Demo Learning Center", orgID)
+	fmt.Printf("Center: %s (%s)\n", "IELTS Demo Learning Center", orgID)
 	fmt.Printf("Platform admin: %s\n", users[0].Email)
 	fmt.Printf("Center admin:   %s\n", users[1].Email)
-	fmt.Printf("Students:       student.a1@v5.local ... student.c2@v5.local\n")
+	fmt.Printf("Students:       student.a1@ielts.local ... student.c2@ielts.local\n")
 	fmt.Printf("Password:       %s\n", *password)
 	fmt.Printf("Listening WAV:  %s\n", audioPath)
 }

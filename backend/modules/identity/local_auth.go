@@ -9,9 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/assessment-platform-v5/internal/auth"
-	"github.com/example/assessment-platform-v5/internal/passwordhash"
-	"github.com/example/assessment-platform-v5/internal/webx"
+	"github.com/example/ielts-platform/internal/auth"
+	"github.com/example/ielts-platform/internal/passwordhash"
+	"github.com/example/ielts-platform/internal/webx"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
@@ -50,7 +50,7 @@ type AuthSession struct {
 }
 
 func validRole(role string) bool {
-	return role == "platform_admin" || role == "center_admin" || role == "student"
+	return role == "admin" || role == "center" || role == "teacher" || role == "student"
 }
 
 func normalizeIP(v string) any {
@@ -200,6 +200,22 @@ func (s *Service) internalLogin(w http.ResponseWriter, r *http.Request) error {
 	}
 	_, _ = s.DB.Exec(r.Context(), `UPDATE auth_credentials SET failed_attempts=0,locked_until=NULL,updated_at=now() WHERE user_id=$1`, p.UserID)
 	_, _ = s.DB.Exec(r.Context(), `DELETE FROM auth_sessions WHERE user_id=$1 AND (expires_at<=now() OR revoked_at IS NOT NULL AND revoked_at<now()-interval '7 days')`, p.UserID)
+	var mfaEnabled bool
+	if validMFARole(p.Role) {
+		err = s.DB.QueryRow(r.Context(), `SELECT EXISTS(SELECT 1 FROM mfa_totp WHERE user_id=$1 AND enabled=true)`, p.UserID).Scan(&mfaEnabled)
+		if err != nil {
+			return err
+		}
+	}
+	if mfaEnabled {
+		challengeID, challengeErr := s.createMFAChallenge(r.Context(), p.UserID, p.Role)
+		if challengeErr != nil {
+			return challengeErr
+		}
+		s.auditLogin(r.Context(), x, uid, false, "mfa_required")
+		webx.JSON(w, http.StatusAccepted, map[string]any{"mfa_required": true, "challenge_id": challengeID, "expires_in": 300, "profile": p})
+		return nil
+	}
 	sessionID := uuid.NewString()
 	out, err := s.issueSession(r.Context(), p, authVersion, sessionID, "aal1", false, "", x.UserAgent, normalizeIP(x.IPAddress))
 	if err != nil {

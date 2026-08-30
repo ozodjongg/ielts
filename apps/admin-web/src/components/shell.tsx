@@ -9,7 +9,8 @@ import {
   Gauge,
   Languages,
   LayoutDashboard,
-  ShieldCheck
+  ShieldCheck,
+  KeyRound
 } from "lucide-react";
 import { useAuth } from "@/components/auth-provider";
 import { Button, Pill } from "@/components/ui";
@@ -21,7 +22,8 @@ const nav = [
   { href: "/services", label: "Service Limits", icon: Gauge },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/dictionary", label: "Dictionary", icon: Languages },
-  { href: "/system", label: "System", icon: ShieldCheck }
+  { href: "/system", label: "System", icon: ShieldCheck },
+  { href: "/security", label: "Security", icon: KeyRound }
 ];
 
 export function PortalShell({ children }: { children: ReactNode }) {
@@ -36,7 +38,7 @@ export function PortalShell({ children }: { children: ReactNode }) {
   }, [auth.loading, auth.profile, pathname, router]);
 
   if (auth.loading) {
-    return <div className="login-wrap"><div className="muted">V5 portal yuklanmoqda…</div></div>;
+    return <div className="login-wrap"><div className="muted">IELTS portal yuklanmoqda…</div></div>;
   }
   if (!auth.profile) return null;
 
@@ -44,8 +46,8 @@ export function PortalShell({ children }: { children: ReactNode }) {
     <div className="shell">
       <aside className="sidebar" aria-label="Primary navigation">
         <div className="brand">
-          <span className="brandmark" aria-hidden="true">V5</span>
-          <div>V5 Platform Admin<div className="muted" style={{ fontSize: 11, fontWeight: 500 }}>SaaS operator portal</div></div>
+          <span className="brandmark" aria-hidden="true">IELTS</span>
+          <div>IELTS Admin<div className="muted" style={{ fontSize: 11, fontWeight: 500 }}>SaaS operator portal</div></div>
         </div>
         <nav className="nav">
           {nav.map((item) => {

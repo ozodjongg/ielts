@@ -4,8 +4,8 @@ import json, re, subprocess, sys
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
-APPS=['admin-web','center-web','student-web']
-PORTAL_ROLE={'admin':'platform_admin','center':'center_admin','student':'student'}
+APPS=['admin-web','center-web','teacher-web','student-web']
+PORTAL_ROLE={'admin':'admin','center':'center','teacher':'teacher','student':'student'}
 
 # Backend public /v1 routes per logical service.
 routes: dict[str,list[tuple[str,str]]]={}
@@ -84,7 +84,7 @@ issues=[]; matched=[]; dynamic_matched=[]
 for c in calls:
     portal,service,method=c.get('portal'),c.get('service'),c.get('method')
     # AuthProvider uses portalPath(portal, "identity", "/me") where portal is
-    # a runtime union of admin|center|student. Verify that common module route
+    # a runtime union of admin|center|teacher|student. Verify that common module route
     # independently instead of dropping it from the contract count.
     if not portal and service:
         down=norm_front(c.get('suffix') or '')
@@ -111,6 +111,7 @@ gateway=(ROOT/'backend/modules/gateway/service.go').read_text(encoding='utf-8')
 allowed={
  'admin': set('identity tenant analytics vocabulary points assessment sat'.split()),
  'center': set('identity tenant assessment listening review sat analytics points vocabulary'.split()),
+ 'teacher': set('identity tenant vocabulary'.split()),
  'student': set('identity assessment vocabulary listening review sat points analytics tenant'.split()),
 }
 for c in matched:
@@ -119,12 +120,13 @@ for c in matched:
     if c['portal']=='student' and c['service']=='tenant' and norm_front(c.get('suffix') or '')!='/v1/services':
         issues.append(f"{c['file']}:{c['line']} student tenant API exceeds gateway read-only /services policy")
 
-# Dynamic identity /me is intentionally shared by all 3 portals.
+# Auth/security helpers intentionally use a runtime portal union across all four portals.
+_dynamic_identity = {'/v1/me','/v1/mfa/status','/v1/mfa/setup','/v1/mfa/verify','/v1/mfa/disable'}
 for c in dynamic_matched:
-    if c.get('service')!='identity' or norm_front(c.get('suffix') or '')!='/v1/me':
+    if c.get('service')!='identity' or norm_front(c.get('suffix') or '') not in _dynamic_identity:
         issues.append(f"{c['file']}:{c['line']} unexpected dynamic portal API call")
 
-# AuthProvider has 3 direct gateway auth calls per app. Verify the templates and
+# AuthProvider has 4 direct gateway auth calls per app. Verify the templates and
 # the gateway's single constrained route.
 auth_calls=[]
 gateway_auth_route=bool(re.search(r'm\.HandleFunc\("POST /auth/\{portal\}/\{action\}"', gateway))
@@ -133,18 +135,18 @@ if not gateway_auth_route:
 for app in APPS:
     p=ROOT/'apps'/app/'src/components/auth-provider.tsx'
     text=p.read_text(encoding='utf-8')
-    for action in ('login','refresh','logout'):
+    for action in ('login','refresh','logout','mfa-verify'):
         pattern=f'/auth/${{portal}}/{action}'
         count=text.count(pattern)
         if count != 1:
             issues.append(f'{app}: expected exactly one {pattern} call, found {count}')
         else:
             auth_calls.append({'file':str(p.relative_to(ROOT)).replace('\\','/'),'portal':'dynamic','action':action,'method':'POST'})
-    if 'typePortal="admin"|"center"|"student"' not in text.replace(' ', '').replace('\n',''):
-        issues.append(f'{app}: AuthProvider portal type must be admin|center|student')
+    if 'typePortal="admin"|"center"|"teacher"|"student"' not in text.replace(' ', '').replace('\n',''):
+        issues.append(f'{app}: AuthProvider portal type must be admin|center|teacher|student')
 
-# Verify backend gateway enforces only those 3 auth actions and role mapping.
-for token in ('action != "login"', 'action != "refresh"', 'action != "logout"'):
+# Verify backend gateway enforces only those 4 auth actions and role mapping.
+for token in ('action != "login"', 'action != "refresh"', 'action != "logout"', 'action != "mfa-verify"'):
     if token not in gateway:
         issues.append(f'gateway: auth action guard missing {token}')
 for portal,role in PORTAL_ROLE.items():

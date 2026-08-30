@@ -11,7 +11,7 @@ import type {
 import { cn } from "@/lib/utils";
 
 const control =
-  "w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-3 text-sm text-[var(--foreground)] shadow-sm outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--foreground)] focus:ring-2 focus:ring-[var(--ring)]/10 disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-[var(--foreground)] aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-[var(--ring)]/10";
+  "w-full rounded-md border border-[var(--border)] bg-[var(--card)] px-3 text-sm text-[var(--foreground)] shadow-sm outline-none transition placeholder:text-[var(--muted)] focus:border-[var(--accent)] focus:ring-2 focus:ring-[var(--accent)]/15 disabled:cursor-not-allowed disabled:opacity-50 aria-[invalid=true]:border-[var(--foreground)] aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-[var(--ring)]/10";
 
 export function Input({ className, ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input data-slot="input" className={cn(control, "h-9", className)} {...props} />;

@@ -1,4 +1,4 @@
-module github.com/example/assessment-platform-v5
+module github.com/example/ielts-platform
 
 go 1.23.0
 

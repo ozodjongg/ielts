@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/example/assessment-platform-v5/internal/migrate"
+	"github.com/example/ielts-platform/internal/migrate"
 )
 
 func env(name, fallback string) string {

@@ -11,7 +11,7 @@ export default function GlobalRouteError({ error, reset }: { error: Error & { di
   return (
     <div className="login-wrap">
       <Card className="login-card">
-        <div className="brand"><span className="brandmark">V5</span><span>V5 Student</span></div>
+        <div className="brand"><span className="brandmark">IELTS</span><span>IELTS Student</span></div>
         <h1 className="title">Sahifa yuklanmadi</h1>
         <p className="subtitle">Student portalda kutilmagan xato yuz berdi.</p>
         {error.digest ? <p className="mono section">Error ID: {error.digest}</p> : null}
