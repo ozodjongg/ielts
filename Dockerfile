@@ -27,6 +27,7 @@ COPY backend/migrations /app/backend-migrations
 COPY data/english-bank /app/data/english-bank
 COPY data/sat-math-bank /app/data/sat-math-bank
 COPY data/vocabulary /app/data/vocabulary
+COPY data/placement /app/data/placement
 COPY deploy/docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN mkdir -p /data/private/listening /data/private/review \
  && chown -R app:app /app /data \
@@ -34,6 +35,8 @@ RUN mkdir -p /data/private/listening /data/private/review \
 ENV MIGRATIONS_DIR=/app/backend-migrations \
     ENGLISH_BANK_DIR=/app/data/english-bank \
     SAT_BANK_DIR=/app/data/sat-math-bank \
+    PLACEMENT_PAPER_PATH=/app/data/placement/placement-test-paper.docx \
+    PLACEMENT_PAPER_MANIFEST_PATH=/app/data/placement/paper-v1.json \
     LISTENING_STORAGE_DIR=/data/private/listening \
     REVIEW_STORAGE_DIR=/data/private/review \
     AUTO_MIGRATE=false \

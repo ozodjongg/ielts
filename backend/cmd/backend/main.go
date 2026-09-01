@@ -209,14 +209,18 @@ func main() {
 	analyticsRouter := analyticsSvc.Router()
 
 	assessmentSvc := &assessment.Service{
-		DB:             pools["assessment"],
-		Bank:           englishBank,
-		InternalSecret: secret,
-		QuestionSecret: requiredSigningSecret("QUESTION_SHUFFLE_SECRET"),
-		Tenant:         clientx.NewLocal(tenantRouter, secret, "assessment"),
-		Identity:       clientx.NewLocal(identityRouter, secret, "assessment"),
-		Points:         clientx.NewLocal(pointsRouter, secret, "assessment"),
-		Analytics:      clientx.NewLocal(analyticsRouter, secret, "assessment"),
+		DB:                         pools["assessment"],
+		Bank:                       englishBank,
+		InternalSecret:             secret,
+		QuestionSecret:             requiredSigningSecret("QUESTION_SHUFFLE_SECRET"),
+		PlacementPaperPath:         config.String("PLACEMENT_PAPER_PATH", "data/placement/placement-test-paper.docx"),
+		PlacementPaperManifestPath: config.String("PLACEMENT_PAPER_MANIFEST_PATH", "data/placement/paper-v1.json"),
+		PlacementInvitationTTL:     time.Duration(config.Int("PLACEMENT_INVITATION_TTL_HOURS", 24)) * time.Hour,
+		PlacementSessionTTL:        time.Duration(config.Int("PLACEMENT_SESSION_TTL_MINUTES", 120)) * time.Minute,
+		Tenant:                     clientx.NewLocal(tenantRouter, secret, "assessment"),
+		Identity:                   clientx.NewLocal(identityRouter, secret, "assessment"),
+		Points:                     clientx.NewLocal(pointsRouter, secret, "assessment"),
+		Analytics:                  clientx.NewLocal(analyticsRouter, secret, "assessment"),
 	}
 	assessmentRouter := assessmentSvc.Router()
 
@@ -293,21 +297,22 @@ func main() {
 	}
 
 	gatewaySvc := &gateway.Service{
-		IdentityHandler:    identityRouter,
-		Verifier:           verifier,
-		Identity:           clientx.NewLocal(identityRouter, secret, "gateway"),
-		InternalSecret:     secret,
-		Handlers:           handlers,
-		ReadyChecks:        readyChecks,
-		AdminOrigins:       config.CSV("ADMIN_ORIGINS"),
-		CenterOrigins:      config.CSV("CENTER_ORIGINS"),
-		TeacherOrigins:     config.CSV("TEACHER_ORIGINS"),
-		StudentOrigins:     config.CSV("STUDENT_ORIGINS"),
-		RequireAdminAAL2:   config.Bool("REQUIRE_ADMIN_AAL2", true),
-		RequireCenterAAL2:  config.Bool("REQUIRE_CENTER_AAL2", true),
-		RequireTeacherAAL2: config.Bool("REQUIRE_TEACHER_AAL2", true),
-		Limiter:            gateway.NewLimiter(config.Int("GATEWAY_RATE_LIMIT_PER_MINUTE", 600), time.Minute),
-		AuthLimiter:        gateway.NewLimiter(config.Int("GATEWAY_AUTH_RATE_LIMIT_PER_MINUTE", 30), time.Minute),
+		IdentityHandler:        identityRouter,
+		Verifier:               verifier,
+		Identity:               clientx.NewLocal(identityRouter, secret, "gateway"),
+		InternalSecret:         secret,
+		Handlers:               handlers,
+		ReadyChecks:            readyChecks,
+		AdminOrigins:           config.CSV("ADMIN_ORIGINS"),
+		CenterOrigins:          config.CSV("CENTER_ORIGINS"),
+		TeacherOrigins:         config.CSV("TEACHER_ORIGINS"),
+		StudentOrigins:         config.CSV("STUDENT_ORIGINS"),
+		RequireAdminAAL2:       config.Bool("REQUIRE_ADMIN_AAL2", true),
+		RequireCenterAAL2:      config.Bool("REQUIRE_CENTER_AAL2", true),
+		RequireTeacherAAL2:     config.Bool("REQUIRE_TEACHER_AAL2", true),
+		Limiter:                gateway.NewLimiter(config.Int("GATEWAY_RATE_LIMIT_PER_MINUTE", 600), time.Minute),
+		AuthLimiter:            gateway.NewLimiter(config.Int("GATEWAY_AUTH_RATE_LIMIT_PER_MINUTE", 30), time.Minute),
+		PublicPlacementLimiter: gateway.NewLimiter(config.Int("PLACEMENT_PUBLIC_RATE_LIMIT_PER_MINUTE", 120), time.Minute),
 	}
 
 	// Railway injects PORT dynamically. Prefer it when present, while keeping

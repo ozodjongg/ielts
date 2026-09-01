@@ -40,6 +40,10 @@ Authentication is fully self-hosted in Go + PostgreSQL; there is no Supabase dep
 - Admin, center and teacher mutations require AAL2 by default.
 - TOTP/MFA is available only to `admin`, `center`, and `teacher`; students use password/session authentication without MFA.
 
+## Pre-registration placement
+
+New candidates no longer need a manually selected level before account creation. The **Center → Placement** workflow runs a center-authenticated 40-question A1–C1 placement first, then creates the student account at the measured level. Candidates without a phone can use the matching printer-ready Word test in `data/placement/placement-test-paper.docx`; center staff enter the paper answers into the same scoring workflow. See [`docs/PRE_REGISTRATION_PLACEMENT.md`](docs/PRE_REGISTRATION_PLACEMENT.md).
+
 ## Teacher learning workflow
 
 Vocabulary mutation is teacher-only. Teachers can:
@@ -112,3 +116,5 @@ The first privileged login is AAL1 until TOTP is enrolled. Admin/center/teacher 
 ## Deployment
 
 See [`START_HERE.md`](START_HERE.md) and [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md).
+
+- Digital pre-registration placement uses a one-time QR invitation and short-lived candidate session; see `docs/PLACEMENT_INVITATION_SECURITY.md`.

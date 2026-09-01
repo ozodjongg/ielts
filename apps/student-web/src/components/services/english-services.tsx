@@ -112,7 +112,11 @@ export default function EnglishServicesPanel() {
         portalPath("student", "assessment", `/attempts/${id}`),
         token,
       );
-      setCurrent(response);
+      setCurrent((previous) => ({
+        ...previous,
+        ...response,
+        service_code: response.service_code ?? previous?.service_code,
+      }));
       return response;
     },
     [token],
@@ -189,7 +193,11 @@ export default function EnglishServicesPanel() {
   };
 
   const submitWriting = async (prompt: ManualPrompt) => {
-    if (!token || !attemptID || !current?.service_code) return;
+    if (!token || !attemptID) return;
+    if (!current?.service_code) {
+      toast.error("Assessment service code is missing. Reload the assessment and try again.");
+      return;
+    }
     const text = (writing[prompt.prompt_id] ?? "").trim();
     if (text.length < 20) {
       toast.error("Writing response is too short.");
@@ -217,7 +225,11 @@ export default function EnglishServicesPanel() {
   };
 
   const submitSpeaking = async (prompt: ManualPrompt) => {
-    if (!token || !attemptID || !current?.service_code) return;
+    if (!token || !attemptID) return;
+    if (!current?.service_code) {
+      toast.error("Assessment service code is missing. Reload the assessment and try again.");
+      return;
+    }
     const file = audio[prompt.prompt_id];
     if (!file) {
       toast.error("Choose or record an audio response first.");

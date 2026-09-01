@@ -6,6 +6,7 @@ import { useEffect, type ReactNode } from "react";
 import {
   BarChart3,
   ClipboardCheck,
+  FileQuestion,
   FileCheck2,
   Headphones,
   Languages,
@@ -24,6 +25,7 @@ import { ThemeToggle } from "@/components/theme-provider";
 const nav = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
   { href: "/students", label: "Students", icon: Users },
+  { href: "/placement", label: "Placement", icon: FileQuestion },
   { href: "/teachers", label: "Teachers", icon: UserCog },
   { href: "/groups", label: "Groups", icon: UsersRound },
   { href: "/services", label: "Services", icon: ClipboardCheck },

@@ -40,6 +40,7 @@ type Service struct {
 	RequireAdminAAL2, RequireCenterAAL2, RequireTeacherAAL2     bool
 	Limiter                                                     *Limiter
 	AuthLimiter                                                 *Limiter
+	PublicPlacementLimiter                                      *Limiter
 }
 
 func (s *Service) Router() http.Handler {
@@ -50,6 +51,7 @@ func (s *Service) Router() http.Handler {
 	m.HandleFunc("GET /ready", s.ready)
 	m.HandleFunc("POST /auth/{portal}/{action}", s.authEndpoint)
 	m.Handle("/api/", http.HandlerFunc(s.proxy))
+	m.Handle("/public/placement/", http.HandlerFunc(s.publicPlacement))
 	return s.cors(webx.Security(m))
 }
 func (s *Service) ready(w http.ResponseWriter, r *http.Request) {
@@ -170,6 +172,50 @@ func (s *Service) proxy(w http.ResponseWriter, r *http.Request) {
 	authz.Attach(req.Header, s.InternalSecret, req.Method, req.URL.RequestURI(), actor)
 	h.ServeHTTP(w, req)
 }
+
+func (s *Service) publicPlacement(w http.ResponseWriter, r *http.Request) {
+	requestID := r.Header.Get("X-Request-ID")
+	if requestID == "" {
+		requestID = fmt.Sprintf("ielts-%d", time.Now().UnixNano())
+	}
+	w.Header().Set("X-Request-ID", requestID)
+	if !s.originAllowed("center", r.Header.Get("Origin")) {
+		webx.JSON(w, http.StatusForbidden, map[string]any{"error": "origin_forbidden", "message": "origin is not allowed for placement", "request_id": requestID})
+		return
+	}
+	if s.PublicPlacementLimiter != nil && !s.PublicPlacementLimiter.Allow(requestIP(r)) {
+		w.Header().Set("Retry-After", "60")
+		webx.JSON(w, http.StatusTooManyRequests, map[string]any{"error": "rate_limited", "message": "too many placement requests", "request_id": requestID})
+		return
+	}
+
+	suffix := strings.TrimPrefix(r.URL.Path, "/public/placement/")
+	allowed := (r.Method == http.MethodPost && suffix == "invitations/claim") ||
+		(r.Method == http.MethodGet && suffix == "session") ||
+		(r.Method == http.MethodPost && suffix == "session/answer") ||
+		(r.Method == http.MethodPost && suffix == "session/finish")
+	if !allowed {
+		webx.JSON(w, http.StatusNotFound, map[string]any{"error": "not_found", "request_id": requestID})
+		return
+	}
+	h := s.Handlers["assessment"]
+	if h == nil {
+		webx.JSON(w, http.StatusServiceUnavailable, map[string]any{"error": "module_unavailable", "request_id": requestID})
+		return
+	}
+	req := r.Clone(r.Context())
+	u := *r.URL
+	u.Path = "/v1/public/placement/" + suffix
+	u.RawPath = ""
+	req.URL = &u
+	req.RequestURI = u.RequestURI()
+	req.Header = make(http.Header)
+	copyRequestHeaders(req.Header, r.Header)
+	req.Header.Del("Authorization")
+	req.Header.Set("X-Request-ID", requestID)
+	h.ServeHTTP(w, req)
+}
+
 func portalRole(portal string) (string, bool) {
 	switch portal {
 	case "admin":
@@ -386,6 +432,8 @@ func (s *Service) cors(next http.Handler) http.Handler {
 			role = "teacher"
 		case strings.HasPrefix(path, "/api/student/"), strings.HasPrefix(path, "/auth/student/"):
 			role = "student"
+		case strings.HasPrefix(path, "/public/placement/"):
+			role = "center"
 		}
 
 		diagnostic := path == "/health" || path == "/ready"
@@ -402,7 +450,7 @@ func (s *Service) cors(next http.Handler) http.Handler {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Vary", "Origin")
 			w.Header().Set("Access-Control-Allow-Credentials", "true")
-			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-ID, Range, X-Playback-Token")
+			w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, X-Request-ID, Range, X-Playback-Token, X-Placement-Session")
 			w.Header().Set("Access-Control-Allow-Methods", "GET,HEAD,POST,PATCH,PUT,DELETE,OPTIONS")
 			w.Header().Set("Access-Control-Max-Age", "600")
 		}

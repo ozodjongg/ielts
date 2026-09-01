@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/usr/bin/env bashexec 
 set -Eeuo pipefail
 
 # IELTS Platform — Windows native local launcher
 # Ishlatish: Git Bash ichida, shu faylni loyiha root papkasiga qo'ying.
-# Talablar: Go 1.23+, Node.js 20.9+, npm, PostgreSQL (psql), Git Bash.
+# Talablar: Go 1.23+, Node.js 20.9+, pnpm, PostgreSQL (psql), Git Bash.
 # Docker yoki tashqi auth SDK kerak emas. Rollar: admin, center, teacher, student.
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)"
@@ -52,6 +52,9 @@ export AUTH_TOTP_SETUP_TTL_MINUTES="${AUTH_TOTP_SETUP_TTL_MINUTES:-10}"
 export AUTH_MFA_RECOVERY_CODES="${AUTH_MFA_RECOVERY_CODES:-10}"
 export GATEWAY_RATE_LIMIT_PER_MINUTE="${GATEWAY_RATE_LIMIT_PER_MINUTE:-600}"
 export GATEWAY_AUTH_RATE_LIMIT_PER_MINUTE="${GATEWAY_AUTH_RATE_LIMIT_PER_MINUTE:-30}"
+export PLACEMENT_INVITATION_TTL_HOURS="${PLACEMENT_INVITATION_TTL_HOURS:-24}"
+export PLACEMENT_SESSION_TTL_MINUTES="${PLACEMENT_SESSION_TTL_MINUTES:-120}"
+export PLACEMENT_PUBLIC_RATE_LIMIT_PER_MINUTE="${PLACEMENT_PUBLIC_RATE_LIMIT_PER_MINUTE:-120}"
 export VOCAB_DAILY_NEW="${VOCAB_DAILY_NEW:-10}"
 export VOCAB_DAILY_REVIEW="${VOCAB_DAILY_REVIEW:-10}"
 export LISTENING_MAX_UPLOAD_MB="${LISTENING_MAX_UPLOAD_MB:-50}"
@@ -118,17 +121,35 @@ require_project() {
   fi
 }
 
+ensure_pnpm() {
+  if command -v pnpm >/dev/null 2>&1; then
+    return 0
+  fi
+
+  # Node.js 20 bilan odatda Corepack mavjud. pnpm PATH'da bo'lmasa,
+  # avval Corepack orqali faollashtirishga urinib ko'ramiz.
+  if command -v corepack >/dev/null 2>&1; then
+    say "pnpm topilmadi; Corepack orqali faollashtirilmoqda..."
+    corepack enable >/dev/null 2>&1 || true
+    corepack prepare pnpm@latest --activate >/dev/null 2>&1 || true
+  fi
+
+  command -v pnpm >/dev/null 2>&1 || \
+    fail "pnpm topilmadi. Node.js/Corepack o‘rnatilganini tekshiring va 'corepack enable' hamda 'corepack prepare pnpm@latest --activate' ni bajaring."
+}
+
 version_checks() {
   command -v go >/dev/null 2>&1 || fail "Go topilmadi. Go 1.23+ PATH ichida bo'lishi kerak."
   command -v node >/dev/null 2>&1 || fail "Node.js topilmadi. Node 20.9+ PATH ichida bo'lishi kerak."
-  command -v npm >/dev/null 2>&1 || fail "npm topilmadi."
+  ensure_pnpm
 
   local go_v node_major node_minor
   go_v="$(go version | awk '{print $3}')"
   node_major="$(node -p 'process.versions.node.split(".")[0]')"
   node_minor="$(node -p 'process.versions.node.split(".")[1]')"
   say "Go:   $go_v"
-  say "Node: $(node --version)"
+  say "Node:  $(node --version)"
+  say "pnpm:  $(pnpm --version)"
 
   if (( node_major < 20 || (node_major == 20 && node_minor < 9) )); then
     fail "Next.js uchun Node.js 20.9+ kerak."
@@ -229,11 +250,41 @@ check_free_port() {
 
 install_frontend_deps() {
   local app="$1"
-  if [[ ! -d "$SCRIPT_DIR/apps/$app/node_modules/next" ]]; then
-    say "$app dependencies o'rnatilmoqda..."
-    (cd "$SCRIPT_DIR/apps/$app" && npm install --no-audit --no-fund)
+  local app_dir="$SCRIPT_DIR/apps/$app"
+  local install_log="$LOG_DIR/${app}-pnpm-install.log"
+
+  say "$app dependencies pnpm orqali tekshirilmoqda..."
+  : >"$install_log"
+
+  # pnpm package.json / lockfile holatini har startda tekshiradi. Bu yangi
+  # dependency qo'shilganda node_modules mavjud bo'lsa ham uni to'g'ri sync qiladi.
+  if (
+    cd "$app_dir"
+    pnpm install --prefer-offline --reporter=append-only
+  ) >"$install_log" 2>&1; then
     ok "$app dependencies tayyor."
+    return 0
   fi
+
+  # Eski node_modules boshqa pnpm virtual-store sozlamasi bilan yaratilgan bo'lsa,
+  # pnpm ERR_PNPM_VIRTUAL_STORE_DIR_MAX_LENGTH_DIFF beradi. Faqat shu holatda
+  # node_modules'ni qayta yaratamiz; pnpm-lock.yaml saqlanadi.
+  if grep -qE 'ERR_PNPM_VIRTUAL_STORE_DIR_MAX_LENGTH_DIFF|ERR_PNPM_UNEXPECTED_STORE' "$install_log"; then
+    warn "$app node_modules eski/boshqa pnpm store sozlamasi bilan yaratilgan."
+    warn "node_modules qayta yaratilmoqda; pnpm-lock.yaml o'chirilmaydi."
+    rm -rf "$app_dir/node_modules"
+
+    if (
+      cd "$app_dir"
+      pnpm install --prefer-offline --reporter=append-only
+    ) >>"$install_log" 2>&1; then
+      ok "$app dependencies pnpm bilan qayta yaratildi."
+      return 0
+    fi
+  fi
+
+  cat "$install_log" >&2
+  fail "$app dependencies o'rnatilmadi. Log: $install_log"
 }
 
 build_backend() {
@@ -259,7 +310,7 @@ start_frontend() {
   pidf="$(pid_file "$name")"
   (
     cd "$SCRIPT_DIR/apps/$app"
-    NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" nohup npm run dev -- -p "$port" >"$log" 2>&1 &
+    NEXT_PUBLIC_API_URL="$NEXT_PUBLIC_API_URL" nohup pnpm exec next dev --webpack -p "$port" >"$log" 2>&1 &
     echo $! >"$pidf"
   )
 }
@@ -495,7 +546,7 @@ cmd_stop() {
   kill_service center
   kill_service admin
   kill_service backend
-  # npm/Next child processlar parent PID yopilgandan keyin portda qolib ketishi mumkin.
+  # pnpm/Next child processlar parent PID yopilgandan keyin portda qolib ketishi mumkin.
   if [[ -d "$SCRIPT_DIR/apps/teacher-web" ]]; then
     kill_port 3004 teacher
   fi
@@ -640,6 +691,8 @@ usage() {
 IELTS Platform — Windows local launcher
 
 Git Bash ichida:
+  Package manager: pnpm.
+
   bash local.sh start            Backend + IELTS frontendlarini ishga tushiradi
   bash local.sh stop             Hammasini to'xtatadi
   bash local.sh restart          Qayta ishga tushiradi

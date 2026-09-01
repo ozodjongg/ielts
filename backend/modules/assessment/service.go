@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -26,6 +27,10 @@ type Service struct {
 	Bank                                *bank.EnglishBank
 	Tenant, Identity, Points, Analytics *clientx.Client
 	InternalSecret, QuestionSecret      string
+	PlacementPaperPath                  string
+	PlacementPaperManifestPath          string
+	PlacementInvitationTTL              time.Duration
+	PlacementSessionTTL                 time.Duration
 }
 type Assignment struct {
 	ID             string     `json:"id"`
@@ -95,6 +100,17 @@ func (s *Service) Router() http.Handler {
 	m.HandleFunc("POST /v1/attempts/{id}/finish", webx.Handle(s.finish))
 	m.HandleFunc("GET /v1/history", webx.Handle(s.history))
 	m.HandleFunc("GET /v1/progress", webx.Handle(s.progress))
+	m.HandleFunc("GET /v1/pre-registration/placements", webx.Handle(s.listPreRegistrationPlacements))
+	m.HandleFunc("POST /v1/pre-registration/placements", webx.Handle(s.createPreRegistrationPlacement))
+	m.HandleFunc("GET /v1/pre-registration/placements/{id}", webx.Handle(s.getPreRegistrationPlacement))
+	m.HandleFunc("POST /v1/pre-registration/placements/{id}/invitation", webx.Handle(s.reissuePreRegistrationInvitation))
+	m.HandleFunc("POST /v1/pre-registration/placements/{id}/finish", webx.Handle(s.finishPreRegistrationPlacement))
+	m.HandleFunc("POST /v1/pre-registration/placements/{id}/registered", webx.Handle(s.markPreRegistrationPlacementRegistered))
+	m.HandleFunc("GET /v1/pre-registration/placement-paper", webx.Handle(s.downloadPlacementPaper))
+	m.HandleFunc("POST /v1/public/placement/invitations/claim", webx.Handle(s.claimPreRegistrationInvitation))
+	m.HandleFunc("GET /v1/public/placement/session", webx.Handle(s.getCandidatePlacementSession))
+	m.HandleFunc("POST /v1/public/placement/session/answer", webx.Handle(s.saveCandidatePlacementAnswer))
+	m.HandleFunc("POST /v1/public/placement/session/finish", webx.Handle(s.finishCandidatePlacement))
 	m.HandleFunc("GET /internal/attempts/{id}", webx.Handle(s.internalAttempt))
 	m.HandleFunc("GET /internal/attempts/{id}/manual-prompts", webx.Handle(s.internalManualPrompts))
 	m.HandleFunc("POST /internal/attempts/{id}/manual-submissions", webx.Handle(s.internalRegisterManualSubmission))
@@ -810,7 +826,7 @@ func (s *Service) current(w http.ResponseWriter, r *http.Request) error {
 		webx.JSON(w, 200, map[string]any{"attempt_id": x.ID, "status": x.Status, "service_code": x.ServiceCode, "position": pos + 1, "answered": len(answered), "total": len(x.Plan), "question": map[string]any{"id": q.UUID, "text": q.Text, "options": opts, "rush_multiplier": p.RushMultiplier}})
 		return nil
 	}
-	resp := map[string]any{"attempt_id": x.ID, "status": x.Status, "answered": len(x.Plan), "total": len(x.Plan), "ready_to_finish": true}
+	resp := map[string]any{"attempt_id": x.ID, "status": x.Status, "service_code": x.ServiceCode, "answered": len(x.Plan), "total": len(x.Plan), "ready_to_finish": true}
 	if x.ServiceCode == "mock" {
 		prompts, err := s.manualPrompts(r.Context(), x.ID)
 		if err != nil {
@@ -1332,4 +1348,734 @@ func (s *Service) emit(ctx context.Context, org, user, code, typ string, payload
 	c, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	_ = s.Analytics.Do(c, "POST", "/internal/events", evt, nil)
+}
+
+type PreRegistrationPlacement struct {
+	ID                      string            `json:"id"`
+	OrganizationID          string            `json:"organization_id"`
+	CreatedBy               string            `json:"created_by"`
+	FullName                string            `json:"full_name"`
+	ContactEmail            *string           `json:"contact_email,omitempty"`
+	ContactPhone            *string           `json:"contact_phone,omitempty"`
+	Mode                    string            `json:"mode"`
+	BankVersion             string            `json:"bank_version"`
+	Plan                    []PlanItem        `json:"plan,omitempty"`
+	Answers                 map[string]string `json:"-"`
+	Status                  string            `json:"status"`
+	Score                   *float64          `json:"score,omitempty"`
+	LevelResult             *string           `json:"level_result,omitempty"`
+	RegisteredUserID        *string           `json:"registered_user_id,omitempty"`
+	InvitationExpiresAt     *time.Time        `json:"invitation_expires_at,omitempty"`
+	InvitationClaimedAt     *time.Time        `json:"invitation_claimed_at,omitempty"`
+	CandidateSessionExpires *time.Time        `json:"candidate_session_expires_at,omitempty"`
+	CandidateLastSeenAt     *time.Time        `json:"candidate_last_seen_at,omitempty"`
+	StartedAt               time.Time         `json:"started_at"`
+	CompletedAt             *time.Time        `json:"completed_at,omitempty"`
+	RegisteredAt            *time.Time        `json:"registered_at,omitempty"`
+}
+
+type PlacementQuestionView struct {
+	ID          string   `json:"id"`
+	Text        string   `json:"text"`
+	Options     []string `json:"options"`
+	Level       string   `json:"level"`
+	SubjectCode string   `json:"subject_code"`
+}
+
+type CandidatePlacementQuestionView struct {
+	ID      string   `json:"id"`
+	Text    string   `json:"text"`
+	Options []string `json:"options"`
+}
+
+type placementResult struct {
+	Score   float64               `json:"score"`
+	Level   string                `json:"level"`
+	ByLevel map[string]*breakdown `json:"by_level"`
+	ByTopic map[string]*breakdown `json:"by_topic"`
+	Clean   map[string]string     `json:"-"`
+}
+
+func opaquePlacementToken() string {
+	// Two UUIDv4 values provide ~244 random bits while remaining URL/QR friendly.
+	return uuid.NewString() + "." + uuid.NewString()
+}
+
+func placementTokenHash(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return fmt.Sprintf("%x", sum[:])
+}
+
+func (s *Service) invitationTTL() time.Duration {
+	if s.PlacementInvitationTTL > 0 {
+		return s.PlacementInvitationTTL
+	}
+	return 24 * time.Hour
+}
+
+func (s *Service) candidateSessionTTL() time.Duration {
+	if s.PlacementSessionTTL > 0 {
+		return s.PlacementSessionTTL
+	}
+	return 2 * time.Hour
+}
+
+func (s *Service) loadPreRegistrationPlacement(ctx context.Context, id string) (PreRegistrationPlacement, error) {
+	var x PreRegistrationPlacement
+	var placementID, orgID, createdBy uuid.UUID
+	var registered *uuid.UUID
+	var rawPlan, rawAnswers []byte
+	err := s.DB.QueryRow(ctx, `SELECT id,organization_id,created_by,full_name,contact_email,contact_phone,mode,bank_version,question_plan,answers,status,score,level_result,registered_user_id,invitation_expires_at,invitation_claimed_at,candidate_session_expires_at,candidate_last_seen_at,started_at,completed_at,registered_at FROM pre_registration_placements WHERE id=$1`, id).
+		Scan(&placementID, &orgID, &createdBy, &x.FullName, &x.ContactEmail, &x.ContactPhone, &x.Mode, &x.BankVersion, &rawPlan, &rawAnswers, &x.Status, &x.Score, &x.LevelResult, &registered, &x.InvitationExpiresAt, &x.InvitationClaimedAt, &x.CandidateSessionExpires, &x.CandidateLastSeenAt, &x.StartedAt, &x.CompletedAt, &x.RegisteredAt)
+	if err != nil {
+		return x, err
+	}
+	x.ID = placementID.String()
+	x.OrganizationID = orgID.String()
+	x.CreatedBy = createdBy.String()
+	if registered != nil {
+		v := registered.String()
+		x.RegisteredUserID = &v
+	}
+	if err := json.Unmarshal(rawPlan, &x.Plan); err != nil {
+		return x, err
+	}
+	x.Answers = map[string]string{}
+	if len(rawAnswers) > 0 {
+		if err := json.Unmarshal(rawAnswers, &x.Answers); err != nil {
+			return x, err
+		}
+	}
+	return x, nil
+}
+
+func (s *Service) placementQuestionViews(plan []PlanItem) ([]PlacementQuestionView, error) {
+	items := make([]PlacementQuestionView, 0, len(plan))
+	for _, p := range plan {
+		q, ok := s.Bank.Questions[p.QuestionID]
+		if !ok {
+			return nil, fmt.Errorf("placement question %s missing from bank", p.QuestionID)
+		}
+		sub, ok := s.Bank.SubjectByUUID[q.SubjectUUID]
+		if !ok {
+			return nil, fmt.Errorf("placement subject %s missing from bank", q.SubjectUUID)
+		}
+		options := make([]string, len(p.DisplayOrder))
+		for i, canon := range p.DisplayOrder {
+			if canon < 0 || canon >= len(q.Options) {
+				return nil, fmt.Errorf("placement option order is invalid for %s", q.UUID)
+			}
+			options[i] = q.Options[canon]
+		}
+		items = append(items, PlacementQuestionView{ID: q.UUID, Text: q.Text, Options: options, Level: sub.Level, SubjectCode: sub.ShortName})
+	}
+	return items, nil
+}
+
+func (s *Service) paperPlacementQuestions() ([]bank.Question, error) {
+	path := strings.TrimSpace(s.PlacementPaperManifestPath)
+	if path == "" {
+		path = "data/placement/paper-v1.json"
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read paper placement manifest: %w", err)
+	}
+	var manifest struct {
+		BankVersion string   `json:"bank_version"`
+		QuestionIDs []string `json:"question_ids"`
+	}
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		return nil, fmt.Errorf("decode paper placement manifest: %w", err)
+	}
+	if manifest.BankVersion != "" && manifest.BankVersion != s.Bank.Version {
+		return nil, fmt.Errorf("paper placement bank version %q does not match runtime bank %q", manifest.BankVersion, s.Bank.Version)
+	}
+	if len(manifest.QuestionIDs) == 0 {
+		return nil, errors.New("paper placement manifest contains no questions")
+	}
+	items := make([]bank.Question, 0, len(manifest.QuestionIDs))
+	seen := map[string]bool{}
+	for _, id := range manifest.QuestionIDs {
+		if seen[id] {
+			return nil, fmt.Errorf("paper placement manifest contains duplicate question %s", id)
+		}
+		seen[id] = true
+		q, ok := s.Bank.Questions[id]
+		if !ok {
+			return nil, fmt.Errorf("paper placement question %s missing from bank", id)
+		}
+		items = append(items, q)
+	}
+	return items, nil
+}
+
+func naturalOrder(n int) []int {
+	out := make([]int, n)
+	for i := range out {
+		out[i] = i
+	}
+	return out
+}
+
+func (s *Service) listPreRegistrationPlacements(w http.ResponseWriter, r *http.Request) error {
+	a, err := s.actor(r)
+	if err != nil {
+		return err
+	}
+	if authz.Require(a, "center") != nil {
+		return webx.E(403, "forbidden", "center admin required")
+	}
+	rows, err := s.DB.Query(r.Context(), `SELECT id,full_name,contact_email,contact_phone,mode,status,score,level_result,registered_user_id,invitation_expires_at,invitation_claimed_at,candidate_session_expires_at,candidate_last_seen_at,(SELECT COUNT(*)::int FROM jsonb_object_keys(COALESCE(answers, '{}'::jsonb))),jsonb_array_length(question_plan),started_at,completed_at,registered_at FROM pre_registration_placements WHERE organization_id=$1 ORDER BY started_at DESC LIMIT 100`, a.OrgID)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	items := []map[string]any{}
+	for rows.Next() {
+		var id uuid.UUID
+		var fullName, mode, status string
+		var email, phone, level *string
+		var score *float64
+		var registered *uuid.UUID
+		var invitationExpires, invitationClaimed, sessionExpires, lastSeen *time.Time
+		var answeredCount, questionCount int
+		var started time.Time
+		var completed, registeredAt *time.Time
+		if err := rows.Scan(&id, &fullName, &email, &phone, &mode, &status, &score, &level, &registered, &invitationExpires, &invitationClaimed, &sessionExpires, &lastSeen, &answeredCount, &questionCount, &started, &completed, &registeredAt); err != nil {
+			return err
+		}
+		item := map[string]any{"id": id.String(), "full_name": fullName, "contact_email": email, "contact_phone": phone, "mode": mode, "status": status, "score": score, "level_result": level, "invitation_expires_at": invitationExpires, "invitation_claimed_at": invitationClaimed, "candidate_session_expires_at": sessionExpires, "candidate_last_seen_at": lastSeen, "answered_count": answeredCount, "question_count": questionCount, "started_at": started, "completed_at": completed, "registered_at": registeredAt}
+		if registered != nil {
+			item["registered_user_id"] = registered.String()
+		}
+		items = append(items, item)
+	}
+	webx.JSON(w, 200, map[string]any{"items": items})
+	return rows.Err()
+}
+
+func (s *Service) createPreRegistrationPlacement(w http.ResponseWriter, r *http.Request) error {
+	a, err := s.actor(r)
+	if err != nil {
+		return err
+	}
+	if authz.Require(a, "center") != nil {
+		return webx.E(403, "forbidden", "center admin required")
+	}
+	var req struct {
+		FullName      string `json:"full_name"`
+		ContactEmail  string `json:"contact_email"`
+		ContactPhone  string `json:"contact_phone"`
+		Mode          string `json:"mode"`
+		QuestionCount int    `json:"question_count"`
+	}
+	if err := webx.Decode(r, &req, 128<<10); err != nil {
+		return err
+	}
+	req.FullName = strings.TrimSpace(req.FullName)
+	req.ContactEmail = strings.ToLower(strings.TrimSpace(req.ContactEmail))
+	req.ContactPhone = strings.TrimSpace(req.ContactPhone)
+	req.Mode = strings.ToLower(strings.TrimSpace(req.Mode))
+	if req.FullName == "" || len(req.FullName) > 120 {
+		return webx.E(400, "full_name", "candidate full name is required")
+	}
+	if req.ContactEmail != "" && (!strings.Contains(req.ContactEmail, "@") || len(req.ContactEmail) > 254) {
+		return webx.E(400, "contact_email", "valid contact email required")
+	}
+	if len(req.ContactPhone) > 40 {
+		return webx.E(400, "contact_phone", "phone number is too long")
+	}
+	if req.Mode == "" {
+		req.Mode = "digital"
+	}
+	if req.Mode != "digital" && req.Mode != "paper" {
+		return webx.E(400, "mode", "mode must be digital or paper")
+	}
+	placementID := uuid.New()
+	var questions []bank.Question
+	if req.Mode == "paper" {
+		questions, err = s.paperPlacementQuestions()
+		if err != nil {
+			return err
+		}
+	} else {
+		count := req.QuestionCount
+		if count == 0 {
+			count = 40
+		}
+		if count < 20 || count > 60 {
+			return webx.E(400, "question_count", "digital placement question count must be 20-60")
+		}
+		questions, err = s.buildQuestions(r.Context(), "placement", "", nil, nil, count, placementID.String(), a.OrgID, "")
+		if err != nil {
+			return err
+		}
+	}
+	plan := make([]PlanItem, 0, len(questions))
+	for _, q := range questions {
+		sub, ok := s.Bank.SubjectByUUID[q.SubjectUUID]
+		if !ok {
+			return fmt.Errorf("placement subject %s missing", q.SubjectUUID)
+		}
+		order := naturalOrder(len(q.Options))
+		if req.Mode == "digital" {
+			order = shuffleOrder(s.QuestionSecret, placementID.String(), q.UUID, len(q.Options))
+		}
+		plan = append(plan, PlanItem{QuestionID: q.UUID, SubjectCode: sub.ShortName, Level: sub.Level, DisplayOrder: order, RushMultiplier: 1})
+	}
+	rawPlan, _ := json.Marshal(plan)
+	var email, phone any
+	if req.ContactEmail != "" {
+		email = req.ContactEmail
+	}
+	if req.ContactPhone != "" {
+		phone = req.ContactPhone
+	}
+	var invitationToken string
+	var invitationHash any
+	var invitationExpires any
+	if req.Mode == "digital" {
+		invitationToken = opaquePlacementToken()
+		invitationHash = placementTokenHash(invitationToken)
+		invitationExpires = time.Now().UTC().Add(s.invitationTTL())
+	}
+	_, err = s.DB.Exec(r.Context(), `INSERT INTO pre_registration_placements(id,organization_id,created_by,full_name,contact_email,contact_phone,mode,bank_version,question_plan,invitation_token_hash,invitation_expires_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`, placementID, a.OrgID, a.UserID, req.FullName, email, phone, req.Mode, s.Bank.Version, rawPlan, invitationHash, invitationExpires)
+	if err != nil {
+		return err
+	}
+	s.emit(r.Context(), a.OrgID, "", "placement", "placement.preregistration.started", map[string]any{"placement_id": placementID.String(), "mode": req.Mode, "question_count": len(plan)})
+	return s.writePreRegistrationPlacementWithToken(w, r, a, placementID.String(), invitationToken)
+}
+
+func (s *Service) preRegistrationPayload(x PreRegistrationPlacement, includePaperQuestions bool) (map[string]any, error) {
+	payload := map[string]any{
+		"id": x.ID, "full_name": x.FullName, "contact_email": x.ContactEmail, "contact_phone": x.ContactPhone,
+		"mode": x.Mode, "status": x.Status, "bank_version": x.BankVersion, "score": x.Score, "level_result": x.LevelResult,
+		"registered_user_id": x.RegisteredUserID, "started_at": x.StartedAt, "completed_at": x.CompletedAt, "registered_at": x.RegisteredAt,
+		"invitation_expires_at": x.InvitationExpiresAt, "invitation_claimed_at": x.InvitationClaimedAt,
+		"candidate_session_expires_at": x.CandidateSessionExpires, "candidate_last_seen_at": x.CandidateLastSeenAt,
+		"question_count": len(x.Plan), "answered_count": len(x.Answers),
+	}
+	if includePaperQuestions {
+		questions, err := s.placementQuestionViews(x.Plan)
+		if err != nil {
+			return nil, err
+		}
+		payload["questions"] = questions
+	}
+	return payload, nil
+}
+
+func (s *Service) writePreRegistrationPlacementWithToken(w http.ResponseWriter, r *http.Request, a authz.Actor, id, invitationToken string) error {
+	x, err := s.loadPreRegistrationPlacement(r.Context(), id)
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && x.OrganizationID != a.OrgID) {
+		return webx.E(404, "placement", "pre-registration placement not found")
+	}
+	if err != nil {
+		return err
+	}
+	payload, err := s.preRegistrationPayload(x, x.Mode == "paper")
+	if err != nil {
+		return err
+	}
+	if invitationToken != "" {
+		payload["invitation_token"] = invitationToken
+	}
+	webx.JSON(w, 200, payload)
+	return nil
+}
+
+func (s *Service) writePreRegistrationPlacement(w http.ResponseWriter, r *http.Request, a authz.Actor, id string) error {
+	return s.writePreRegistrationPlacementWithToken(w, r, a, id, "")
+}
+
+func (s *Service) getPreRegistrationPlacement(w http.ResponseWriter, r *http.Request) error {
+	a, err := s.actor(r)
+	if err != nil {
+		return err
+	}
+	if authz.Require(a, "center") != nil {
+		return webx.E(403, "forbidden", "center admin required")
+	}
+	if _, err := uuid.Parse(r.PathValue("id")); err != nil {
+		return webx.E(400, "placement", "invalid placement id")
+	}
+	return s.writePreRegistrationPlacement(w, r, a, r.PathValue("id"))
+}
+
+func (s *Service) reissuePreRegistrationInvitation(w http.ResponseWriter, r *http.Request) error {
+	a, err := s.actor(r)
+	if err != nil {
+		return err
+	}
+	if authz.Require(a, "center") != nil {
+		return webx.E(403, "forbidden", "center admin required")
+	}
+	id := r.PathValue("id")
+	if _, err := uuid.Parse(id); err != nil {
+		return webx.E(400, "placement", "invalid placement id")
+	}
+	token := opaquePlacementToken()
+	hash := placementTokenHash(token)
+	expires := time.Now().UTC().Add(s.invitationTTL())
+	ct, err := s.DB.Exec(r.Context(), `UPDATE pre_registration_placements SET invitation_token_hash=$3,invitation_expires_at=$4,invitation_claimed_at=NULL,candidate_session_hash=NULL,candidate_session_expires_at=NULL,candidate_last_seen_at=NULL,answers='{}'::jsonb WHERE id=$1 AND organization_id=$2 AND mode='digital' AND status='in_progress' AND (candidate_session_hash IS NULL OR candidate_session_expires_at < now())`, id, a.OrgID, hash, expires)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return webx.E(409, "invitation_active", "active candidate session cannot be replaced; wait for it to expire or create a new placement")
+	}
+	s.emit(r.Context(), a.OrgID, "", "placement", "placement.invitation.reissued", map[string]any{"placement_id": id, "expires_at": expires})
+	return s.writePreRegistrationPlacementWithToken(w, r, a, id, token)
+}
+
+func (s *Service) gradePreRegistrationPlacement(x PreRegistrationPlacement, answers map[string]string) (placementResult, error) {
+	if len(answers) < len(x.Plan) {
+		return placementResult{}, webx.E(409, "incomplete", "all placement questions must be answered")
+	}
+	clean := make(map[string]string, len(x.Plan))
+	byLevel := map[string]*breakdown{}
+	byTopic := map[string]*breakdown{}
+	correctN := 0
+	for _, p := range x.Plan {
+		option := strings.ToUpper(strings.TrimSpace(answers[p.QuestionID]))
+		if len(option) != 1 {
+			return placementResult{}, webx.E(400, "answer", "each placement answer must be A-D")
+		}
+		idx := strings.Index("ABCD", option)
+		if idx < 0 || idx >= len(p.DisplayOrder) {
+			return placementResult{}, webx.E(400, "answer", "each placement answer must be A-D")
+		}
+		clean[p.QuestionID] = option
+		q, ok := s.Bank.Questions[p.QuestionID]
+		if !ok {
+			return placementResult{}, fmt.Errorf("placement question %s missing from bank", p.QuestionID)
+		}
+		sub, ok := s.Bank.SubjectByUUID[q.SubjectUUID]
+		if !ok {
+			return placementResult{}, fmt.Errorf("placement subject %s missing from bank", q.SubjectUUID)
+		}
+		lb := byLevel[sub.Level]
+		if lb == nil {
+			lb = &breakdown{}
+			byLevel[sub.Level] = lb
+		}
+		tb := byTopic[sub.ShortName]
+		if tb == nil {
+			tb = &breakdown{}
+			byTopic[sub.ShortName] = tb
+		}
+		lb.Attempts++
+		tb.Attempts++
+		lb.MaxPoints += float64(sub.Point)
+		tb.MaxPoints += float64(sub.Point)
+		canon := p.DisplayOrder[idx]
+		if canon == q.CorrectIndex {
+			correctN++
+			lb.Correct++
+			tb.Correct++
+			lb.Points += float64(sub.Point)
+			tb.Points += float64(sub.Point)
+		}
+	}
+	for _, m := range []map[string]*breakdown{byLevel, byTopic} {
+		for _, b := range m {
+			if b.Attempts > 0 {
+				b.Accuracy = 100 * float64(b.Correct) / float64(b.Attempts)
+			}
+		}
+	}
+	score := 100 * float64(correctN) / float64(len(x.Plan))
+	return placementResult{Score: score, Level: s.levelFrom(byLevel), ByLevel: byLevel, ByTopic: byTopic, Clean: clean}, nil
+}
+
+func (s *Service) finishPreRegistrationPlacement(w http.ResponseWriter, r *http.Request) error {
+	a, err := s.actor(r)
+	if err != nil {
+		return err
+	}
+	if authz.Require(a, "center") != nil {
+		return webx.E(403, "forbidden", "center admin required")
+	}
+	if _, err := uuid.Parse(r.PathValue("id")); err != nil {
+		return webx.E(400, "placement", "invalid placement id")
+	}
+	x, err := s.loadPreRegistrationPlacement(r.Context(), r.PathValue("id"))
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && x.OrganizationID != a.OrgID) {
+		return webx.E(404, "placement", "pre-registration placement not found")
+	}
+	if err != nil {
+		return err
+	}
+	if x.Status != "in_progress" {
+		return webx.E(409, "placement", "placement is already completed")
+	}
+	if x.Mode != "paper" {
+		return webx.E(409, "candidate_required", "digital placement must be completed from the candidate invitation")
+	}
+	var req struct {
+		Answers map[string]string `json:"answers"`
+	}
+	if err := webx.Decode(r, &req, 256<<10); err != nil {
+		return err
+	}
+	result, err := s.gradePreRegistrationPlacement(x, req.Answers)
+	if err != nil {
+		return err
+	}
+	rawAnswers, _ := json.Marshal(result.Clean)
+	ct, err := s.DB.Exec(r.Context(), `UPDATE pre_registration_placements SET answers=$3,status='completed',score=$4,level_result=$5,completed_at=now() WHERE id=$1 AND organization_id=$2 AND status='in_progress'`, x.ID, a.OrgID, rawAnswers, result.Score, result.Level)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return webx.E(409, "placement", "placement state changed; reload and try again")
+	}
+	s.emit(r.Context(), a.OrgID, "", "placement", "placement.preregistration.completed", map[string]any{"placement_id": x.ID, "score": result.Score, "level": result.Level, "mode": x.Mode})
+	webx.JSON(w, 200, map[string]any{"id": x.ID, "status": "completed", "score": result.Score, "level": result.Level, "by_level": result.ByLevel, "by_topic": result.ByTopic})
+	return nil
+}
+
+func (s *Service) markPreRegistrationPlacementRegistered(w http.ResponseWriter, r *http.Request) error {
+	a, err := s.actor(r)
+	if err != nil {
+		return err
+	}
+	if authz.Require(a, "center") != nil {
+		return webx.E(403, "forbidden", "center admin required")
+	}
+	if _, err := uuid.Parse(r.PathValue("id")); err != nil {
+		return webx.E(400, "placement", "invalid placement id")
+	}
+	x, err := s.loadPreRegistrationPlacement(r.Context(), r.PathValue("id"))
+	if errors.Is(err, pgx.ErrNoRows) || (err == nil && x.OrganizationID != a.OrgID) {
+		return webx.E(404, "placement", "pre-registration placement not found")
+	}
+	if err != nil {
+		return err
+	}
+	if x.Status != "completed" || x.LevelResult == nil {
+		return webx.E(409, "placement", "placement must be completed before registration")
+	}
+	var req struct {
+		UserID string `json:"user_id"`
+	}
+	if err := webx.Decode(r, &req, 64<<10); err != nil {
+		return err
+	}
+	if _, err := uuid.Parse(req.UserID); err != nil {
+		return webx.E(400, "user_id", "invalid registered student id")
+	}
+	var profile struct {
+		OrganizationID *string `json:"organization_id"`
+		Role           string  `json:"role"`
+		CurrentLevel   *string `json:"current_level"`
+	}
+	if err := s.Identity.Do(r.Context(), "GET", "/internal/resolve?user_id="+req.UserID, nil, &profile); err != nil {
+		return fmt.Errorf("validate registered student: %w", err)
+	}
+	if profile.Role != "student" || profile.OrganizationID == nil || *profile.OrganizationID != a.OrgID {
+		return webx.E(400, "user_id", "registered account does not belong to this center")
+	}
+	if profile.CurrentLevel == nil || *profile.CurrentLevel != *x.LevelResult {
+		return webx.E(409, "level", "registered account level must match placement result")
+	}
+	_, err = s.DB.Exec(r.Context(), `UPDATE pre_registration_placements SET status='registered',registered_user_id=$3,registered_at=now(),candidate_session_hash=NULL WHERE id=$1 AND organization_id=$2`, x.ID, a.OrgID, req.UserID)
+	if err != nil {
+		return err
+	}
+	s.emit(r.Context(), a.OrgID, req.UserID, "placement", "placement.preregistration.registered", map[string]any{"placement_id": x.ID, "level": *x.LevelResult})
+	webx.JSON(w, 200, map[string]any{"ok": true, "placement_id": x.ID, "student_user_id": req.UserID, "level": *x.LevelResult})
+	return nil
+}
+
+func candidateSessionToken(r *http.Request) string {
+	return strings.TrimSpace(r.Header.Get("X-Placement-Session"))
+}
+
+func (s *Service) loadCandidatePlacement(ctx context.Context, rawSession string) (PreRegistrationPlacement, error) {
+	if len(rawSession) < 40 || len(rawSession) > 200 {
+		return PreRegistrationPlacement{}, webx.E(401, "placement_session", "invalid or expired placement session")
+	}
+	hash := placementTokenHash(rawSession)
+	var id uuid.UUID
+	err := s.DB.QueryRow(ctx, `SELECT id FROM pre_registration_placements WHERE candidate_session_hash=$1 AND mode='digital' AND status='in_progress' AND candidate_session_expires_at > now()`, hash).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return PreRegistrationPlacement{}, webx.E(401, "placement_session", "invalid or expired placement session")
+	}
+	if err != nil {
+		return PreRegistrationPlacement{}, err
+	}
+	return s.loadPreRegistrationPlacement(ctx, id.String())
+}
+
+func (s *Service) candidatePlacementPayload(x PreRegistrationPlacement) (map[string]any, error) {
+	views, err := s.placementQuestionViews(x.Plan)
+	if err != nil {
+		return nil, err
+	}
+	questions := make([]CandidatePlacementQuestionView, 0, len(views))
+	for _, q := range views {
+		questions = append(questions, CandidatePlacementQuestionView{ID: q.ID, Text: q.Text, Options: q.Options})
+	}
+	return map[string]any{
+		"id":                 x.ID,
+		"full_name":          x.FullName,
+		"status":             x.Status,
+		"question_count":     len(x.Plan),
+		"answered_count":     len(x.Answers),
+		"questions":          questions,
+		"answers":            x.Answers,
+		"session_expires_at": x.CandidateSessionExpires,
+	}, nil
+}
+
+func (s *Service) claimPreRegistrationInvitation(w http.ResponseWriter, r *http.Request) error {
+	var req struct {
+		Token string `json:"token"`
+	}
+	if err := webx.Decode(r, &req, 32<<10); err != nil {
+		return err
+	}
+	req.Token = strings.TrimSpace(req.Token)
+	if len(req.Token) < 40 || len(req.Token) > 200 {
+		return webx.E(410, "invitation_unavailable", "invitation is expired, invalid, or already used")
+	}
+	invitationHash := placementTokenHash(req.Token)
+	sessionToken := opaquePlacementToken()
+	sessionHash := placementTokenHash(sessionToken)
+	sessionExpires := time.Now().UTC().Add(s.candidateSessionTTL())
+	var id uuid.UUID
+	err := s.DB.QueryRow(r.Context(), `UPDATE pre_registration_placements SET invitation_token_hash=NULL,invitation_claimed_at=now(),candidate_session_hash=$2,candidate_session_expires_at=$3,candidate_last_seen_at=now() WHERE invitation_token_hash=$1 AND mode='digital' AND status='in_progress' AND invitation_expires_at > now() AND candidate_session_hash IS NULL RETURNING id`, invitationHash, sessionHash, sessionExpires).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return webx.E(410, "invitation_unavailable", "invitation is expired, invalid, or already used")
+	}
+	if err != nil {
+		return err
+	}
+	x, err := s.loadPreRegistrationPlacement(r.Context(), id.String())
+	if err != nil {
+		return err
+	}
+	payload, err := s.candidatePlacementPayload(x)
+	if err != nil {
+		return err
+	}
+	payload["session_token"] = sessionToken
+	s.emit(r.Context(), x.OrganizationID, "", "placement", "placement.invitation.claimed", map[string]any{"placement_id": x.ID})
+	webx.JSON(w, 200, payload)
+	return nil
+}
+
+func (s *Service) getCandidatePlacementSession(w http.ResponseWriter, r *http.Request) error {
+	x, err := s.loadCandidatePlacement(r.Context(), candidateSessionToken(r))
+	if err != nil {
+		return err
+	}
+	_, _ = s.DB.Exec(r.Context(), `UPDATE pre_registration_placements SET candidate_last_seen_at=now() WHERE id=$1`, x.ID)
+	payload, err := s.candidatePlacementPayload(x)
+	if err != nil {
+		return err
+	}
+	webx.JSON(w, 200, payload)
+	return nil
+}
+
+func (s *Service) saveCandidatePlacementAnswer(w http.ResponseWriter, r *http.Request) error {
+	rawSession := candidateSessionToken(r)
+	x, err := s.loadCandidatePlacement(r.Context(), rawSession)
+	if err != nil {
+		return err
+	}
+	var req struct {
+		QuestionID string `json:"question_id"`
+		Answer     string `json:"answer"`
+	}
+	if err := webx.Decode(r, &req, 32<<10); err != nil {
+		return err
+	}
+	req.QuestionID = strings.TrimSpace(req.QuestionID)
+	req.Answer = strings.ToUpper(strings.TrimSpace(req.Answer))
+	validQuestion := false
+	optionCount := 0
+	for _, p := range x.Plan {
+		if p.QuestionID == req.QuestionID {
+			validQuestion = true
+			optionCount = len(p.DisplayOrder)
+			break
+		}
+	}
+	if !validQuestion {
+		return webx.E(400, "question_id", "question does not belong to this placement")
+	}
+	idx := strings.Index("ABCD", req.Answer)
+	if len(req.Answer) != 1 || idx < 0 || idx >= optionCount {
+		return webx.E(400, "answer", "answer must be a valid A-D option")
+	}
+	hash := placementTokenHash(rawSession)
+	ct, err := s.DB.Exec(r.Context(), `UPDATE pre_registration_placements SET answers=jsonb_set(answers,ARRAY[$3::text],to_jsonb($4::text),true),candidate_last_seen_at=now() WHERE id=$1 AND candidate_session_hash=$2 AND status='in_progress' AND candidate_session_expires_at > now()`, x.ID, hash, req.QuestionID, req.Answer)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return webx.E(401, "placement_session", "placement session expired")
+	}
+	webx.JSON(w, 200, map[string]any{"ok": true, "question_id": req.QuestionID, "answer": req.Answer})
+	return nil
+}
+
+func (s *Service) finishCandidatePlacement(w http.ResponseWriter, r *http.Request) error {
+	rawSession := candidateSessionToken(r)
+	x, err := s.loadCandidatePlacement(r.Context(), rawSession)
+	if err != nil {
+		return err
+	}
+	result, err := s.gradePreRegistrationPlacement(x, x.Answers)
+	if err != nil {
+		return err
+	}
+	rawAnswers, _ := json.Marshal(result.Clean)
+	hash := placementTokenHash(rawSession)
+	ct, err := s.DB.Exec(r.Context(), `UPDATE pre_registration_placements SET answers=$3,status='completed',score=$4,level_result=$5,completed_at=now(),candidate_last_seen_at=now(),candidate_session_hash=NULL WHERE id=$1 AND candidate_session_hash=$2 AND status='in_progress' AND candidate_session_expires_at > now()`, x.ID, hash, rawAnswers, result.Score, result.Level)
+	if err != nil {
+		return err
+	}
+	if ct.RowsAffected() == 0 {
+		return webx.E(409, "placement", "placement state changed; reload and try again")
+	}
+	s.emit(r.Context(), x.OrganizationID, "", "placement", "placement.preregistration.completed", map[string]any{"placement_id": x.ID, "score": result.Score, "level": result.Level, "mode": "digital"})
+	webx.JSON(w, 200, map[string]any{"id": x.ID, "status": "completed", "score": result.Score, "level": result.Level})
+	return nil
+}
+
+func (s *Service) downloadPlacementPaper(w http.ResponseWriter, r *http.Request) error {
+	a, err := s.actor(r)
+	if err != nil {
+		return err
+	}
+	if authz.Require(a, "center") != nil {
+		return webx.E(403, "forbidden", "center admin required")
+	}
+	path := strings.TrimSpace(s.PlacementPaperPath)
+	if path == "" {
+		path = "data/placement/placement-test-paper.docx"
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return webx.E(404, "placement_paper", "placement paper template is not installed")
+		}
+		return err
+	}
+	defer f.Close()
+	st, err := f.Stat()
+	if err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+	w.Header().Set("Content-Disposition", `attachment; filename="IELTS-placement-test-paper.docx"`)
+	w.Header().Set("Cache-Control", "private, no-store")
+	http.ServeContent(w, r, "IELTS-placement-test-paper.docx", st.ModTime(), f)
+	return nil
 }

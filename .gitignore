@@ -1,9 +1,9 @@
 .env
+/presentation
+**/prompt.ai
 /.local-run/
 /.runtime/
 **/.env.local
-**/prompt.ai
-*.md
 **/node_modules/
 **/.next/
 *.log
